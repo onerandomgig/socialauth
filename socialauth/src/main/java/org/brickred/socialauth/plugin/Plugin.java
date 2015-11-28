@@ -29,26 +29,24 @@ import org.brickred.socialauth.util.ProviderSupport;
 /**
  * This interface represents the Plugin. All plugins should be inherited from
  * this interface.
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public interface Plugin {
 
-	/**
-	 * Retrieves the provider support object. provider support object provides
-	 * the functionality to make OAuth HTTP call for a given provider.
-	 * 
-	 * @return
-	 */
-	public ProviderSupport getProviderSupport();
+    /**
+     * Retrieves the provider support object. provider support object provides
+     * the functionality to make OAuth HTTP call for a given provider.
+     *
+     * @return
+     */
+    public ProviderSupport getProviderSupport();
 
-	/**
-	 * Updates the {@link ProviderSupport}
-	 * 
-	 * @param providerSupport
-	 *            provider support object
-	 */
-	public void setProviderSupport(ProviderSupport providerSupport);
+    /**
+     * Updates the {@link ProviderSupport}
+     *
+     * @param providerSupport provider support object
+     */
+    public void setProviderSupport(ProviderSupport providerSupport);
 
 }

@@ -24,137 +24,131 @@
  */
 package org.brickred.socialauth;
 
-import java.io.Serializable;
-
 import org.brickred.socialauth.util.DateComponents;
+
+import java.io.Serializable;
 
 /**
  * Provides education detail
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class Education implements Serializable {
 
-	private static final long serialVersionUID = 1790175712918723267L;
+    private static final long serialVersionUID = 1790175712918723267L;
 
-	private String schoolName;
-	private String fieldOfStudy;
-	private String degree;
-	private DateComponents startDate;
-	private DateComponents endDate;
+    private String schoolName;
+    private String fieldOfStudy;
+    private String degree;
+    private DateComponents startDate;
+    private DateComponents endDate;
 
-	/**
-	 * Returns school/college name
-	 * 
-	 * @return school name
-	 */
-	public String getSchoolName() {
-		return schoolName;
-	}
+    /**
+     * Returns school/college name
+     *
+     * @return school name
+     */
+    public String getSchoolName() {
+        return schoolName;
+    }
 
-	/**
-	 * Updates School Name
-	 * 
-	 * @param schoolName
-	 *            the school name
-	 */
-	public void setSchoolName(final String schoolName) {
-		this.schoolName = schoolName;
-	}
+    /**
+     * Updates School Name
+     *
+     * @param schoolName the school name
+     */
+    public void setSchoolName(final String schoolName) {
+        this.schoolName = schoolName;
+    }
 
-	/**
-	 * Returns Field of Study
-	 * 
-	 * @return field of study
-	 */
-	public String getFieldOfStudy() {
-		return fieldOfStudy;
-	}
+    /**
+     * Returns Field of Study
+     *
+     * @return field of study
+     */
+    public String getFieldOfStudy() {
+        return fieldOfStudy;
+    }
 
-	/**
-	 * Updates Field of Study
-	 * 
-	 * @param fieldOfStudy
-	 *            the field of study
-	 */
-	public void setFieldOfStudy(final String fieldOfStudy) {
-		this.fieldOfStudy = fieldOfStudy;
-	}
+    /**
+     * Updates Field of Study
+     *
+     * @param fieldOfStudy the field of study
+     */
+    public void setFieldOfStudy(final String fieldOfStudy) {
+        this.fieldOfStudy = fieldOfStudy;
+    }
 
-	/**
-	 * Returns the degree name
-	 * 
-	 * @return degree name
-	 */
-	public String getDegree() {
-		return degree;
-	}
+    /**
+     * Returns the degree name
+     *
+     * @return degree name
+     */
+    public String getDegree() {
+        return degree;
+    }
 
-	/**
-	 * Updates the degree name
-	 * 
-	 * @param degree
-	 *            the degree name
-	 */
-	public void setDegree(final String degree) {
-		this.degree = degree;
-	}
+    /**
+     * Updates the degree name
+     *
+     * @param degree the degree name
+     */
+    public void setDegree(final String degree) {
+        this.degree = degree;
+    }
 
-	/**
-	 * Returns the start date of education
-	 * 
-	 * @return start date of education
-	 */
-	public DateComponents getStartDate() {
-		return startDate;
-	}
+    /**
+     * Returns the start date of education
+     *
+     * @return start date of education
+     */
+    public DateComponents getStartDate() {
+        return startDate;
+    }
 
-	/**
-	 * Updates the start date of education
-	 * 
-	 * @param startDate
-	 *            the start date of education
-	 */
-	public void setStartDate(final DateComponents startDate) {
-		this.startDate = startDate;
-	}
+    /**
+     * Updates the start date of education
+     *
+     * @param startDate the start date of education
+     */
+    public void setStartDate(final DateComponents startDate) {
+        this.startDate = startDate;
+    }
 
-	/**
-	 * Returns the end date of education
-	 * 
-	 * @return the end date of education
-	 */
-	public DateComponents getEndDate() {
-		return endDate;
-	}
+    /**
+     * Returns the end date of education
+     *
+     * @return the end date of education
+     */
+    public DateComponents getEndDate() {
+        return endDate;
+    }
 
-	/**
-	 * Updates the end date of education
-	 * 
-	 * @param endDate
-	 *            the end date of education
-	 */
-	public void setEndDate(final DateComponents endDate) {
-		this.endDate = endDate;
-	}
+    /**
+     * Updates the end date of education
+     *
+     * @param endDate the end date of education
+     */
+    public void setEndDate(final DateComponents endDate) {
+        this.endDate = endDate;
+    }
 
-	/**
-	 * Retrieves the education as a string
-	 * 
-	 * @return String
-	 */
-	@Override
-	public String toString() {
-		StringBuilder result = new StringBuilder();
-		String NEW_LINE = System.getProperty("line.separator");
-		result.append(this.getClass().getName() + " Object {" + NEW_LINE);
-		result.append(" schoolName: " + schoolName + NEW_LINE);
-		result.append(" fieldOfStudy: " + fieldOfStudy + NEW_LINE);
-		result.append(" degree: " + degree + NEW_LINE);
-		result.append(" startDate: " + startDate + NEW_LINE);
-		result.append(" endDate: " + endDate + NEW_LINE);
-		result.append("}");
-		return result.toString();
-	}
+    /**
+     * Retrieves the education as a string
+     *
+     * @return String
+     */
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        String NEW_LINE = System.getProperty("line.separator");
+        result.append(this.getClass().getName() + " Object {" + NEW_LINE);
+        result.append(" schoolName: " + schoolName + NEW_LINE);
+        result.append(" fieldOfStudy: " + fieldOfStudy + NEW_LINE);
+        result.append(" degree: " + degree + NEW_LINE);
+        result.append(" startDate: " + startDate + NEW_LINE);
+        result.append(" endDate: " + endDate + NEW_LINE);
+        result.append("}");
+        return result.toString();
+    }
 }

@@ -24,12 +24,6 @@
  */
 package org.brickred.socialauth.plugin.twitter;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.Album;
@@ -41,110 +35,115 @@ import org.brickred.socialauth.util.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Album Plugin implementation for Twitter
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class AlbumsPluginImpl implements AlbumsPlugin, Serializable {
 
-	private static final long serialVersionUID = -4810906169491380470L;
-	private static final String FEED_URL = "https://api.twitter.com/1.1/statuses/home_timeline.json?include_entities=true&count=100";
-	private final Log LOG = LogFactory.getLog(this.getClass());
-	private HashMap<String, List<Photo>> photo_data = new HashMap<String, List<Photo>>();
+    private static final long serialVersionUID = -4810906169491380470L;
+    private static final String FEED_URL = "https://api.twitter.com/1.1/statuses/home_timeline.json?include_entities=true&count=100";
+    private final Log LOG = LogFactory.getLog(this.getClass());
+    private HashMap<String, List<Photo>> photo_data = new HashMap<String, List<Photo>>();
 
-	private ProviderSupport providerSupport;
+    private ProviderSupport providerSupport;
 
-	public AlbumsPluginImpl(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    public AlbumsPluginImpl(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 
-	@Override
-	public List<Album> getAlbums() throws Exception {
-		Response response = null;
-		List<Album> albums = new ArrayList<Album>();
-		LOG.info("Getting feeds from URL : " + FEED_URL);
+    @Override
+    public List<Album> getAlbums() throws Exception {
+        Response response = null;
+        List<Album> albums = new ArrayList<Album>();
+        LOG.info("Getting feeds from URL : " + FEED_URL);
 
-		response = providerSupport.api(FEED_URL);
-		String respStr = response.getResponseBodyAsString(Constants.ENCODING);
-		LOG.debug("Feeds json string :: " + respStr);
-		JSONArray jarr = new JSONArray(respStr);
-		LOG.debug("Feeds count :: " + jarr.length());
+        response = providerSupport.api(FEED_URL);
+        String respStr = response.getResponseBodyAsString(Constants.ENCODING);
+        LOG.debug("Feeds json string :: " + respStr);
+        JSONArray jarr = new JSONArray(respStr);
+        LOG.debug("Feeds count :: " + jarr.length());
 
-		for (int i = 0; i < jarr.length(); i++) {
-			Album album = new Album();
-			JSONObject jobj = jarr.getJSONObject(i);
+        for (int i = 0; i < jarr.length(); i++) {
+            Album album = new Album();
+            JSONObject jobj = jarr.getJSONObject(i);
 
-			if (jobj.has("user")) {
-				JSONObject userObj = jobj.getJSONObject("user");
+            if (jobj.has("user")) {
+                JSONObject userObj = jobj.getJSONObject("user");
 
-				if (jobj.has("entities")) {
-					JSONObject entitiesObj = jobj.getJSONObject("entities");
-					if (entitiesObj.has("media")) {
-						JSONObject mediaObj = entitiesObj.getJSONArray("media")
-								.getJSONObject(0);
-						if (mediaObj.has("type")
-								&& mediaObj.optString("type").equalsIgnoreCase(
-										"photo")) {
-							if (userObj.optString("name",null)!=null
-									&& mediaObj.optString("media_url",null)!=null) {
-								List<Photo> photos = photo_data.get(userObj
-										.optString("name"));
-								if (photos == null) {
-									photos = new ArrayList<Photo>();
-									photo_data.put(
-											userObj.optString("name", null),
-											photos);
+                if (jobj.has("entities")) {
+                    JSONObject entitiesObj = jobj.getJSONObject("entities");
+                    if (entitiesObj.has("media")) {
+                        JSONObject mediaObj = entitiesObj.getJSONArray("media")
+                                .getJSONObject(0);
+                        if (mediaObj.has("type")
+                                && mediaObj.optString("type").equalsIgnoreCase(
+                                "photo")) {
+                            if (userObj.optString("name", null) != null
+                                    && mediaObj.optString("media_url", null) != null) {
+                                List<Photo> photos = photo_data.get(userObj
+                                        .optString("name"));
+                                if (photos == null) {
+                                    photos = new ArrayList<Photo>();
+                                    photo_data.put(
+                                            userObj.optString("name", null),
+                                            photos);
 
-									album.setName(userObj.optString("name",
-											null));
-									album.setCoverPhoto(userObj.optString(
-											"profile_image_url").replaceAll(
-											"_normal", "_reasonably_small"));
-									albums.add(album);
-								}
-								Photo photo = new Photo();
-								String photoURL = mediaObj
-										.getString("media_url");
-								photo.setThumbImage(photoURL + ":thumb");
-								photo.setSmallImage(photoURL + ":small");
-								photo.setMediumImage(photoURL);
-								photo.setLargeImage(photoURL + ":large");
-								photo.setTitle(jobj.optString("text", null));
-								photo.setId(mediaObj.optString("id_str", null));
-								photo.setLink(mediaObj.optString(
-										"expanded_url", null));
-								if (jobj.has("retweet_count")) {
-									Map<String, String> map = new HashMap<String, String>();
-									map.put("retweet_count", String
-											.valueOf(jobj
-													.optInt("retweet_count")));
-									photo.setMetaData(map);
-								}
-								photos.add(photo);
-							}
-						}
-					}
-				}
-			}
-		}
+                                    album.setName(userObj.optString("name",
+                                            null));
+                                    album.setCoverPhoto(userObj.optString(
+                                            "profile_image_url").replaceAll(
+                                            "_normal", "_reasonably_small"));
+                                    albums.add(album);
+                                }
+                                Photo photo = new Photo();
+                                String photoURL = mediaObj
+                                        .getString("media_url");
+                                photo.setThumbImage(photoURL + ":thumb");
+                                photo.setSmallImage(photoURL + ":small");
+                                photo.setMediumImage(photoURL);
+                                photo.setLargeImage(photoURL + ":large");
+                                photo.setTitle(jobj.optString("text", null));
+                                photo.setId(mediaObj.optString("id_str", null));
+                                photo.setLink(mediaObj.optString(
+                                        "expanded_url", null));
+                                if (jobj.has("retweet_count")) {
+                                    Map<String, String> map = new HashMap<String, String>();
+                                    map.put("retweet_count", String
+                                            .valueOf(jobj
+                                                    .optInt("retweet_count")));
+                                    photo.setMetaData(map);
+                                }
+                                photos.add(photo);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-		for (Album album : albums) {
-			List<Photo> photos = photo_data.get(album.getName());
-			album.setPhotos(photos);
-			album.setPhotosCount(photos.size());
-		}
-		return albums;
-	}
+        for (Album album : albums) {
+            List<Photo> photos = photo_data.get(album.getName());
+            album.setPhotos(photos);
+            album.setPhotosCount(photos.size());
+        }
+        return albums;
+    }
 
-	@Override
-	public ProviderSupport getProviderSupport() {
-		return providerSupport;
-	}
+    @Override
+    public ProviderSupport getProviderSupport() {
+        return providerSupport;
+    }
 
-	@Override
-	public void setProviderSupport(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    @Override
+    public void setProviderSupport(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 }

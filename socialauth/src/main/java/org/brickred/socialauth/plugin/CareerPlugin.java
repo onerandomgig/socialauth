@@ -28,11 +28,10 @@ import org.brickred.socialauth.Career;
 
 /**
  * Provides functionality related to Career details
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public interface CareerPlugin extends Plugin {
 
-	public Career getCareerDetails() throws Exception;
+    public Career getCareerDetails() throws Exception;
 }

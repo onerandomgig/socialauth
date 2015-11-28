@@ -24,13 +24,6 @@
  */
 package org.brickred.socialauth.provider;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.AbstractProvider;
@@ -42,309 +35,296 @@ import org.brickred.socialauth.exception.ServerDataException;
 import org.brickred.socialauth.exception.SocialAuthException;
 import org.brickred.socialauth.oauthstrategy.OAuth2;
 import org.brickred.socialauth.oauthstrategy.OAuthStrategyBase;
-import org.brickred.socialauth.util.AccessGrant;
-import org.brickred.socialauth.util.Constants;
-import org.brickred.socialauth.util.MethodType;
-import org.brickred.socialauth.util.OAuthConfig;
-import org.brickred.socialauth.util.Response;
+import org.brickred.socialauth.util.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.util.*;
+
 /**
  * Provider implementation for StackExchange/StackOverFlow
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class StackExchangeImpl extends AbstractProvider {
 
-	private static final long serialVersionUID = 8418999872164052171L;
-	private static final String PROFILE_URL = "https://api.stackexchange.com/2.2/me";
-	private static final Map<String, String> ENDPOINTS;
-	private final Log LOG = LogFactory.getLog(StackExchangeImpl.class);
+    private static final long serialVersionUID = 8418999872164052171L;
+    private static final String PROFILE_URL = "https://api.stackexchange.com/2.2/me";
+    private static final Map<String, String> ENDPOINTS;
+    private static final String[] AuthPerms = new String[]{"no_expiry"};
 
-	private Permission scope;
-	private OAuthConfig config;
-	private Profile userProfile;
-	private AccessGrant accessGrant;
-	private OAuthStrategyBase authenticationStrategy;
-	private String state;
+    static {
+        ENDPOINTS = new HashMap<String, String>();
+        ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                "https://stackexchange.com/oauth");
+        ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                "https://stackexchange.com/oauth/access_token");
+    }
 
-	private static final String[] AuthPerms = new String[] { "no_expiry" };
+    private final Log LOG = LogFactory.getLog(StackExchangeImpl.class);
+    private Permission scope;
+    private OAuthConfig config;
+    private Profile userProfile;
+    private AccessGrant accessGrant;
+    private OAuthStrategyBase authenticationStrategy;
+    private String state;
 
-	static {
-		ENDPOINTS = new HashMap<String, String>();
-		ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-				"https://stackexchange.com/oauth");
-		ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-				"https://stackexchange.com/oauth/access_token");
-	}
+    /**
+     * Stores configuration for the provider
+     *
+     * @param providerConfig It contains the configuration of application like consumer key
+     *                       and consumer secret
+     * @throws Exception
+     */
+    public StackExchangeImpl(final OAuthConfig providerConfig) throws Exception {
+        config = providerConfig;
+        state = "SocialAuth" + System.currentTimeMillis();
+        // Need to pass scope while fetching RequestToken from LinkedIn for new
+        // keys
+        if (config.getCustomPermissions() != null) {
+            scope = Permission.CUSTOM;
+        }
 
-	/**
-	 * Stores configuration for the provider
-	 * 
-	 * @param providerConfig
-	 *            It contains the configuration of application like consumer key
-	 *            and consumer secret
-	 * @throws Exception
-	 */
-	public StackExchangeImpl(final OAuthConfig providerConfig) throws Exception {
-		config = providerConfig;
-		state = "SocialAuth" + System.currentTimeMillis();
-		// Need to pass scope while fetching RequestToken from LinkedIn for new
-		// keys
-		if (config.getCustomPermissions() != null) {
-			scope = Permission.CUSTOM;
-		}
+        if (config.getAuthenticationUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                    config.getAuthenticationUrl());
+        } else {
+            config.setAuthenticationUrl(ENDPOINTS
+                    .get(Constants.OAUTH_AUTHORIZATION_URL));
+        }
 
-		if (config.getAuthenticationUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-					config.getAuthenticationUrl());
-		} else {
-			config.setAuthenticationUrl(ENDPOINTS
-					.get(Constants.OAUTH_AUTHORIZATION_URL));
-		}
+        if (config.getAccessTokenUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                    config.getAccessTokenUrl());
+        } else {
+            config.setAccessTokenUrl(ENDPOINTS
+                    .get(Constants.OAUTH_ACCESS_TOKEN_URL));
+        }
 
-		if (config.getAccessTokenUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-					config.getAccessTokenUrl());
-		} else {
-			config.setAccessTokenUrl(ENDPOINTS
-					.get(Constants.OAUTH_ACCESS_TOKEN_URL));
-		}
+        authenticationStrategy = new OAuth2(config, ENDPOINTS);
+        authenticationStrategy.setPermission(scope);
+        authenticationStrategy.setScope(getScope());
+    }
 
-		authenticationStrategy = new OAuth2(config, ENDPOINTS);
-		authenticationStrategy.setPermission(scope);
-		authenticationStrategy.setScope(getScope());
-	}
+    /**
+     * This is the most important action. It redirects the browser to an
+     * appropriate URL which will be used for authentication with the provider
+     * that has been set using setId()
+     */
+    @Override
+    public String getLoginRedirectURL(String successUrl) throws Exception {
+        Map<String, String> map = new HashMap<String, String>();
+        map.put(Constants.STATE, state);
+        return authenticationStrategy.getLoginRedirectURL(successUrl, map);
+    }
 
-	/**
-	 * Stores access grant for the provider
-	 * 
-	 * @param accessGrant
-	 *            It contains the access token and other information
-	 * @throws Exception
-	 */
-	@Override
-	public void setAccessGrant(AccessGrant accessGrant)
-			throws AccessTokenExpireException, SocialAuthException {
-		this.accessGrant = accessGrant;
-		authenticationStrategy.setAccessGrant(accessGrant);
-	}
+    /**
+     * Verifies the user when the external provider redirects back to our
+     * application.
+     *
+     * @param requestParams request parameters, received from the provider
+     * @return Profile object containing the profile information
+     * @throws Exception
+     */
+    @Override
+    public Profile verifyResponse(Map<String, String> requestParams)
+            throws Exception {
+        if (requestParams.containsKey(Constants.STATE)) {
+            String stateStr = requestParams.get(Constants.STATE);
+            if (!state.equals(stateStr)) {
+                throw new SocialAuthException(
+                        "State parameter value does not match with expected value");
+            }
+        }
+        return doVerifyResponse(requestParams);
+    }
 
-	/**
-	 * This is the most important action. It redirects the browser to an
-	 * appropriate URL which will be used for authentication with the provider
-	 * that has been set using setId()
-	 * 
-	 */
-	@Override
-	public String getLoginRedirectURL(String successUrl) throws Exception {
-		Map<String, String> map = new HashMap<String, String>();
-		map.put(Constants.STATE, state);
-		return authenticationStrategy.getLoginRedirectURL(successUrl, map);
-	}
+    private Profile doVerifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        LOG.info("Verifying the authentication response from provider");
+        accessGrant = authenticationStrategy.verifyResponse(requestParams,
+                MethodType.POST.toString());
+        return getProfile();
+    }
 
-	/**
-	 * Verifies the user when the external provider redirects back to our
-	 * application.
-	 * 
-	 * 
-	 * @param requestParams
-	 *            request parameters, received from the provider
-	 * @return Profile object containing the profile information
-	 * @throws Exception
-	 */
-	@Override
-	public Profile verifyResponse(Map<String, String> requestParams)
-			throws Exception {
-		if (requestParams.containsKey(Constants.STATE)) {
-			String stateStr = requestParams.get(Constants.STATE);
-			if (!state.equals(stateStr)) {
-				throw new SocialAuthException(
-						"State parameter value does not match with expected value");
-			}
-		}
-		return doVerifyResponse(requestParams);
-	}
+    private Profile getProfile() throws Exception {
+        String presp;
+        String profileURL = PROFILE_URL;
+        String site = "stackoverflow";
+        if (config.getCustomProperties() != null) {
+            if (config.getCustomProperties().get("site") != null) {
+                site = config.getCustomProperties().get("site");
+            }
+            profileURL += "?key=" + config.getCustomProperties().get("key")
+                    + "&site=" + site;
+        } else {
+            throw new SocialAuthException(
+                    "Please set 'stackapps.com.custom.key' property in oauth_consumer.properties  ");
+        }
+        try {
+            Response response = authenticationStrategy.executeFeed(profileURL);
+            presp = response.getResponseBodyAsString(Constants.ENCODING);
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting profile from "
+                    + profileURL, e);
+        }
+        try {
+            LOG.debug("User Profile : " + presp);
+            JSONObject jsonResp = new JSONObject(presp);
+            Profile p = new Profile();
+            if (jsonResp.has("items")) {
+                JSONArray items = jsonResp.getJSONArray("items");
+                if (items.length() > 0) {
+                    JSONObject resp = items.getJSONObject(0);
+                    p.setDisplayName(resp.optString("display_name", null));
+                    p.setFullName(resp.optString("display_name", null));
+                    p.setProfileImageURL(resp.optString("profile_image", null));
+                    p.setValidatedId(resp.optString("user_id", null));
+                    p.setLocation(resp.optString("location", null));
+                    if (config.isSaveRawResponse()) {
+                        p.setRawResponse(presp);
+                    }
+                    p.setProviderId(getProviderId());
+                    if (config.isSaveRawResponse()) {
+                        p.setRawResponse(presp);
+                    }
+                }
+            }
+            userProfile = p;
+            return p;
 
-	private Profile doVerifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		LOG.info("Verifying the authentication response from provider");
-		accessGrant = authenticationStrategy.verifyResponse(requestParams,
-				MethodType.POST.toString());
-		return getProfile();
-	}
+        } catch (Exception ex) {
+            throw new ServerDataException(
+                    "Failed to parse the user profile json : " + presp, ex);
+        }
+    }
 
-	private Profile getProfile() throws Exception {
-		String presp;
-		String profileURL = PROFILE_URL;
-		String site = "stackoverflow";
-		if (config.getCustomProperties() != null) {
-			if (config.getCustomProperties().get("site") != null) {
-				site = config.getCustomProperties().get("site");
-			}
-			profileURL += "?key=" + config.getCustomProperties().get("key")
-					+ "&site=" + site;
-		} else {
-			throw new SocialAuthException(
-					"Please set 'stackapps.com.custom.key' property in oauth_consumer.properties  ");
-		}
-		try {
-			Response response = authenticationStrategy.executeFeed(profileURL);
-			presp = response.getResponseBodyAsString(Constants.ENCODING);
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting profile from "
-					+ profileURL, e);
-		}
-		try {
-			LOG.debug("User Profile : " + presp);
-			JSONObject jsonResp = new JSONObject(presp);
-			Profile p = new Profile();
-			if (jsonResp.has("items")) {
-				JSONArray items = jsonResp.getJSONArray("items");
-				if (items.length() > 0) {
-					JSONObject resp = items.getJSONObject(0);
-					p.setDisplayName(resp.optString("display_name", null));
-					p.setFullName(resp.optString("display_name", null));
-					p.setProfileImageURL(resp.optString("profile_image", null));
-					p.setValidatedId(resp.optString("user_id", null));
-					p.setLocation(resp.optString("location", null));
-					if (config.isSaveRawResponse()) {
-						p.setRawResponse(presp);
-					}
-					p.setProviderId(getProviderId());
-					if (config.isSaveRawResponse()) {
-						p.setRawResponse(presp);
-					}
-				}
-			}
-			userProfile = p;
-			return p;
+    @Override
+    public Response updateStatus(String msg) throws Exception {
+        LOG.warn("WARNING: Not implemented for StackExchange");
+        throw new SocialAuthException(
+                "Update Status is not implemented for StackExchange");
+    }
 
-		} catch (Exception ex) {
-			throw new ServerDataException(
-					"Failed to parse the user profile json : " + presp, ex);
-		}
-	}
+    @Override
+    public List<Contact> getContactList() throws Exception {
+        LOG.warn("WARNING: Not implemented for StackExchange");
+        throw new SocialAuthException(
+                "Get contact list is not implemented for StackExchange");
+    }
 
-	@Override
-	public Response updateStatus(String msg) throws Exception {
-		LOG.warn("WARNING: Not implemented for StackExchange");
-		throw new SocialAuthException(
-				"Update Status is not implemented for StackExchange");
-	}
+    @Override
+    public void logout() {
+        accessGrant = null;
+        authenticationStrategy.logout();
+    }
 
-	@Override
-	public List<Contact> getContactList() throws Exception {
-		LOG.warn("WARNING: Not implemented for StackExchange");
-		throw new SocialAuthException(
-				"Get contact list is not implemented for StackExchange");
-	}
+    @Override
+    public void setPermission(Permission p) {
+        LOG.debug("Permission requested : " + p.toString());
+        this.scope = p;
+        authenticationStrategy.setPermission(this.scope);
+    }
 
-	@Override
-	public void logout() {
-		accessGrant = null;
-		authenticationStrategy.logout();
-	}
+    /**
+     * Makes HTTP request to a given URL.It attaches access token in URL.
+     *
+     * @param url          URL to make HTTP request.
+     * @param methodType   Method type can be GET, POST or PUT
+     * @param params       Parameter need to pass with request
+     * @param headerParams Parameters need to pass as Header Parameters
+     * @param body         Request Body
+     * @return Response object
+     * @throws Exception
+     */
+    @Override
+    public Response api(String url, String methodType,
+                        Map<String, String> params, Map<String, String> headerParams,
+                        String body) throws Exception {
+        LOG.info("Calling api function for url	:	" + url);
+        Response response = null;
+        try {
+            response = authenticationStrategy.executeFeed(url, methodType,
+                    params, headerParams, body);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Error while making request to URL : " + url, e);
+        }
+        return response;
+    }
 
-	@Override
-	public void setPermission(Permission p) {
-		LOG.debug("Permission requested : " + p.toString());
-		this.scope = p;
-		authenticationStrategy.setPermission(this.scope);
-	}
+    @Override
+    public Profile getUserProfile() throws Exception {
+        if (userProfile == null && accessGrant != null) {
+            getProfile();
+        }
+        return userProfile;
+    }
 
-	/**
-	 * Makes HTTP request to a given URL.It attaches access token in URL.
-	 * 
-	 * @param url
-	 *            URL to make HTTP request.
-	 * @param methodType
-	 *            Method type can be GET, POST or PUT
-	 * @param params
-	 *            Parameter need to pass with request
-	 * @param headerParams
-	 *            Parameters need to pass as Header Parameters
-	 * @param body
-	 *            Request Body
-	 * @return Response object
-	 * @throws Exception
-	 */
-	@Override
-	public Response api(String url, String methodType,
-			Map<String, String> params, Map<String, String> headerParams,
-			String body) throws Exception {
-		LOG.info("Calling api function for url	:	" + url);
-		Response response = null;
-		try {
-			response = authenticationStrategy.executeFeed(url, methodType,
-					params, headerParams, body);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Error while making request to URL : " + url, e);
-		}
-		return response;
-	}
+    @Override
+    public AccessGrant getAccessGrant() {
+        return accessGrant;
+    }
 
-	@Override
-	public Profile getUserProfile() throws Exception {
-		if (userProfile == null && accessGrant != null) {
-			getProfile();
-		}
-		return userProfile;
-	}
+    /**
+     * Stores access grant for the provider
+     *
+     * @param accessGrant It contains the access token and other information
+     * @throws Exception
+     */
+    @Override
+    public void setAccessGrant(AccessGrant accessGrant)
+            throws AccessTokenExpireException, SocialAuthException {
+        this.accessGrant = accessGrant;
+        authenticationStrategy.setAccessGrant(accessGrant);
+    }
 
-	@Override
-	public AccessGrant getAccessGrant() {
-		return accessGrant;
-	}
+    @Override
+    public String getProviderId() {
+        return config.getId();
+    }
 
-	@Override
-	public String getProviderId() {
-		return config.getId();
-	}
+    @Override
+    public Response uploadImage(String message, String fileName,
+                                InputStream inputStream) throws Exception {
+        LOG.warn("WARNING: Not implemented for StackExchange");
+        throw new SocialAuthException(
+                "Upload Image is not implemented for StackExchange");
+    }
 
-	@Override
-	public Response uploadImage(String message, String fileName,
-			InputStream inputStream) throws Exception {
-		LOG.warn("WARNING: Not implemented for StackExchange");
-		throw new SocialAuthException(
-				"Upload Image is not implemented for StackExchange");
-	}
+    @Override
+    protected List<String> getPluginsList() {
+        List<String> list = new ArrayList<String>();
+        if (config.getRegisteredPlugins() != null
+                && config.getRegisteredPlugins().length > 0) {
+            list.addAll(Arrays.asList(config.getRegisteredPlugins()));
+        }
+        return list;
+    }
 
-	@Override
-	protected List<String> getPluginsList() {
-		List<String> list = new ArrayList<String>();
-		if (config.getRegisteredPlugins() != null
-				&& config.getRegisteredPlugins().length > 0) {
-			list.addAll(Arrays.asList(config.getRegisteredPlugins()));
-		}
-		return list;
-	}
+    @Override
+    protected OAuthStrategyBase getOauthStrategy() {
+        return authenticationStrategy;
+    }
 
-	@Override
-	protected OAuthStrategyBase getOauthStrategy() {
-		return authenticationStrategy;
-	}
-
-	private String getScope() {
-		StringBuffer result = new StringBuffer();
-		String arr[] = AuthPerms;
-		if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
-			arr = AuthPerms;
-		} else if (Permission.CUSTOM.equals(scope)
-				&& config.getCustomPermissions() != null) {
-			arr = config.getCustomPermissions().split(",");
-		}
-		result.append(arr[0]);
-		for (int i = 1; i < arr.length; i++) {
-			result.append(" ").append(arr[i]);
-		}
-		String pluginScopes = getPluginsScope(config);
-		if (pluginScopes != null) {
-			result.append(" ").append(pluginScopes);
-		}
-		return result.toString();
-	}
+    private String getScope() {
+        StringBuffer result = new StringBuffer();
+        String arr[] = AuthPerms;
+        if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
+            arr = AuthPerms;
+        } else if (Permission.CUSTOM.equals(scope)
+                && config.getCustomPermissions() != null) {
+            arr = config.getCustomPermissions().split(",");
+        }
+        result.append(arr[0]);
+        for (int i = 1; i < arr.length; i++) {
+            result.append(" ").append(arr[i]);
+        }
+        String pluginScopes = getPluginsScope(config);
+        if (pluginScopes != null) {
+            result.append(" ").append(pluginScopes);
+        }
+        return result.toString();
+    }
 }

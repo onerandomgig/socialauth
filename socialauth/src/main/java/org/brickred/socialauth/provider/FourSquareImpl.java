@@ -25,13 +25,6 @@
 
 package org.brickred.socialauth.provider;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.AbstractProvider;
@@ -50,374 +43,365 @@ import org.brickred.socialauth.util.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.util.*;
+
 /**
  * Provider implementation for FourSquare. This uses the oAuth API provided by
  * FourSquare
- * 
+ *
  * @author tarunn@brickred.com
- * 
  */
 public class FourSquareImpl extends AbstractProvider {
 
-	private static final long serialVersionUID = 3364430495809289118L;
-	private static final String FOURSQUARE_VERSION_PARAMETER = "v=20140101";
-	private static final String PROFILE_URL = "https://api.foursquare.com/v2/users/self?"
-			+ FOURSQUARE_VERSION_PARAMETER;
-	private static final String CONTACTS_URL = "https://api.foursquare.com/v2/users/self/friends?"
-			+ FOURSQUARE_VERSION_PARAMETER;
-	private static final String VIEW_PROFILE_URL = "http://foursquare.com/user/";
-	private static final Map<String, String> ENDPOINTS;
-	private final Log LOG = LogFactory.getLog(FourSquareImpl.class);
+    private static final long serialVersionUID = 3364430495809289118L;
+    private static final String FOURSQUARE_VERSION_PARAMETER = "v=20140101";
+    private static final String PROFILE_URL = "https://api.foursquare.com/v2/users/self?"
+            + FOURSQUARE_VERSION_PARAMETER;
+    private static final String CONTACTS_URL = "https://api.foursquare.com/v2/users/self/friends?"
+            + FOURSQUARE_VERSION_PARAMETER;
+    private static final String VIEW_PROFILE_URL = "http://foursquare.com/user/";
+    private static final Map<String, String> ENDPOINTS;
 
-	private Permission scope;
-	private String accessToken;
-	private OAuthConfig config;
-	private Profile userProfile;
-	private AccessGrant accessGrant;
-	private OAuthStrategyBase authenticationStrategy;
+    static {
+        ENDPOINTS = new HashMap<String, String>();
+        ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                "https://foursquare.com/oauth2/authenticate");
+        ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                "https://foursquare.com/oauth2/access_token");
+    }
 
-	static {
-		ENDPOINTS = new HashMap<String, String>();
-		ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-				"https://foursquare.com/oauth2/authenticate");
-		ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-				"https://foursquare.com/oauth2/access_token");
-	}
+    private final Log LOG = LogFactory.getLog(FourSquareImpl.class);
+    private Permission scope;
+    private String accessToken;
+    private OAuthConfig config;
+    private Profile userProfile;
+    private AccessGrant accessGrant;
+    private OAuthStrategyBase authenticationStrategy;
 
-	/**
-	 * Stores configuration for the provider
-	 * 
-	 * @param providerConfig
-	 *            It contains the configuration of application like consumer key
-	 *            and consumer secret
-	 * @throws Exception
-	 */
-	public FourSquareImpl(final OAuthConfig providerConfig) throws Exception {
-		config = providerConfig;
+    /**
+     * Stores configuration for the provider
+     *
+     * @param providerConfig It contains the configuration of application like consumer key
+     *                       and consumer secret
+     * @throws Exception
+     */
+    public FourSquareImpl(final OAuthConfig providerConfig) throws Exception {
+        config = providerConfig;
 
-		if (config.getAuthenticationUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-					config.getAuthenticationUrl());
-		} else {
-			config.setAuthenticationUrl(ENDPOINTS
-					.get(Constants.OAUTH_AUTHORIZATION_URL));
-		}
+        if (config.getAuthenticationUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                    config.getAuthenticationUrl());
+        } else {
+            config.setAuthenticationUrl(ENDPOINTS
+                    .get(Constants.OAUTH_AUTHORIZATION_URL));
+        }
 
-		if (config.getAccessTokenUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-					config.getAccessTokenUrl());
-		} else {
-			config.setAccessTokenUrl(ENDPOINTS
-					.get(Constants.OAUTH_ACCESS_TOKEN_URL));
-		}
+        if (config.getAccessTokenUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                    config.getAccessTokenUrl());
+        } else {
+            config.setAccessTokenUrl(ENDPOINTS
+                    .get(Constants.OAUTH_ACCESS_TOKEN_URL));
+        }
 
-		authenticationStrategy = new OAuth2(config, ENDPOINTS);
-		authenticationStrategy.setAccessTokenParameterName("oauth_token");
-	}
+        authenticationStrategy = new OAuth2(config, ENDPOINTS);
+        authenticationStrategy.setAccessTokenParameterName("oauth_token");
+    }
 
-	/**
-	 * Stores access grant for the provider
-	 * 
-	 * @param accessGrant
-	 *            It contains the access token and other information
-	 * @throws AccessTokenExpireException
-	 */
-	@Override
-	public void setAccessGrant(final AccessGrant accessGrant)
-			throws AccessTokenExpireException {
-		this.accessGrant = accessGrant;
-		accessToken = accessGrant.getKey();
-		authenticationStrategy.setAccessGrant(accessGrant);
-	}
+    /**
+     * This is the most important action. It redirects the browser to an
+     * appropriate URL which will be used for authentication with the provider
+     * that has been set using setId()
+     *
+     * @throws Exception
+     */
 
-	/**
-	 * This is the most important action. It redirects the browser to an
-	 * appropriate URL which will be used for authentication with the provider
-	 * that has been set using setId()
-	 * 
-	 * @throws Exception
-	 */
+    @Override
+    public String getLoginRedirectURL(final String successUrl) throws Exception {
+        return authenticationStrategy.getLoginRedirectURL(successUrl);
 
-	@Override
-	public String getLoginRedirectURL(final String successUrl) throws Exception {
-		return authenticationStrategy.getLoginRedirectURL(successUrl);
+    }
 
-	}
+    /**
+     * Verifies the user when the external provider redirects back to our
+     * application.
+     *
+     * @param requestParams Request Parameters, received from the provider
+     * @return Profile object containing the profile information
+     * @throws Exception
+     */
+    @Override
+    public Profile verifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        return doVerifyResponse(requestParams);
+    }
 
-	/**
-	 * Verifies the user when the external provider redirects back to our
-	 * application.
-	 * 
-	 * @return Profile object containing the profile information
-	 * @param requestParams
-	 *            Request Parameters, received from the provider
-	 * @throws Exception
-	 */
-	@Override
-	public Profile verifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		return doVerifyResponse(requestParams);
-	}
+    private Profile doVerifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        LOG.info("Verifying the authentication response from provider");
+        if (requestParams.get("error") != null
+                && "access_denied".equals(requestParams.get("error"))) {
+            throw new UserDeniedPermissionException();
+        }
 
-	private Profile doVerifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		LOG.info("Verifying the authentication response from provider");
-		if (requestParams.get("error") != null
-				&& "access_denied".equals(requestParams.get("error"))) {
-			throw new UserDeniedPermissionException();
-		}
+        accessGrant = authenticationStrategy.verifyResponse(requestParams);
+        if (accessGrant != null) {
+            accessToken = accessGrant.getKey();
+            LOG.debug("Obtaining user profile");
+            return getProfile();
+        } else {
+            throw new SocialAuthException("Access token not found");
+        }
+    }
 
-		accessGrant = authenticationStrategy.verifyResponse(requestParams);
-		if (accessGrant != null) {
-			accessToken = accessGrant.getKey();
-			LOG.debug("Obtaining user profile");
-			return getProfile();
-		} else {
-			throw new SocialAuthException("Access token not found");
-		}
-	}
+    private Profile getProfile() throws Exception {
+        LOG.debug("Obtaining user profile");
+        Profile profile = new Profile();
+        Response serviceResponse;
+        try {
+            serviceResponse = authenticationStrategy.executeFeed(PROFILE_URL);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Failed to retrieve the user profile from  " + PROFILE_URL,
+                    e);
+        }
+        String res;
+        try {
+            res = serviceResponse.getResponseBodyAsString(Constants.ENCODING);
+        } catch (Exception exc) {
+            throw new SocialAuthException("Failed to read response from  "
+                    + PROFILE_URL, exc);
+        }
 
-	private Profile getProfile() throws Exception {
-		LOG.debug("Obtaining user profile");
-		Profile profile = new Profile();
-		Response serviceResponse;
-		try {
-			serviceResponse = authenticationStrategy.executeFeed(PROFILE_URL);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Failed to retrieve the user profile from  " + PROFILE_URL,
-					e);
-		}
-		String res;
-		try {
-			res = serviceResponse.getResponseBodyAsString(Constants.ENCODING);
-		} catch (Exception exc) {
-			throw new SocialAuthException("Failed to read response from  "
-					+ PROFILE_URL, exc);
-		}
+        JSONObject jobj = new JSONObject(res);
+        JSONObject rObj;
+        JSONObject uObj;
+        if (jobj.has("response")) {
+            rObj = jobj.getJSONObject("response");
+        } else {
+            throw new SocialAuthException(
+                    "Failed to parse the user profile json : " + res);
+        }
+        if (rObj.has("user")) {
+            uObj = rObj.getJSONObject("user");
+        } else {
+            throw new SocialAuthException(
+                    "Failed to parse the user profile json : " + res);
+        }
+        profile.setValidatedId(uObj.optString("id", null));
+        profile.setFirstName(uObj.optString("firstName", null));
+        profile.setLastName(uObj.optString("lastName", null));
+        profile.setProfileImageURL(uObj.optString("photo", null));
+        profile.setGender(uObj.optString("gender", null));
+        profile.setLocation(uObj.optString("homeCity", null));
+        if (uObj.has("contact")) {
+            JSONObject cobj = uObj.getJSONObject("contact");
+            if (cobj.has("email")) {
+                profile.setEmail(cobj.optString("email", null));
+            }
+        }
+        profile.setProviderId(getProviderId());
+        if (config.isSaveRawResponse()) {
+            profile.setRawResponse(res);
+        }
+        userProfile = profile;
+        return profile;
+    }
 
-		JSONObject jobj = new JSONObject(res);
-		JSONObject rObj;
-		JSONObject uObj;
-		if (jobj.has("response")) {
-			rObj = jobj.getJSONObject("response");
-		} else {
-			throw new SocialAuthException(
-					"Failed to parse the user profile json : " + res);
-		}
-		if (rObj.has("user")) {
-			uObj = rObj.getJSONObject("user");
-		} else {
-			throw new SocialAuthException(
-					"Failed to parse the user profile json : " + res);
-		}
-		profile.setValidatedId(uObj.optString("id", null));
-		profile.setFirstName(uObj.optString("firstName", null));
-		profile.setLastName(uObj.optString("lastName", null));
-		profile.setProfileImageURL(uObj.optString("photo", null));
-		profile.setGender(uObj.optString("gender", null));
-		profile.setLocation(uObj.optString("homeCity", null));
-		if (uObj.has("contact")) {
-			JSONObject cobj = uObj.getJSONObject("contact");
-			if (cobj.has("email")) {
-				profile.setEmail(cobj.optString("email", null));
-			}
-		}
-		profile.setProviderId(getProviderId());
-		if (config.isSaveRawResponse()) {
-			profile.setRawResponse(res);
-		}
-		userProfile = profile;
-		return profile;
-	}
+    /**
+     * Gets the list of contacts of the user.
+     *
+     * @return List of contact objects representing Contacts. Only name and
+     * profile URL will be available
+     */
 
-	/**
-	 * Gets the list of contacts of the user.
-	 * 
-	 * @return List of contact objects representing Contacts. Only name and
-	 *         profile URL will be available
-	 */
+    @Override
+    public List<Contact> getContactList() throws Exception {
+        LOG.info("Fetching contacts from " + CONTACTS_URL);
 
-	@Override
-	public List<Contact> getContactList() throws Exception {
-		LOG.info("Fetching contacts from " + CONTACTS_URL);
+        Response serviceResponse;
+        try {
+            serviceResponse = authenticationStrategy.executeFeed(CONTACTS_URL);
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting contacts from "
+                    + CONTACTS_URL, e);
+        }
+        if (serviceResponse.getStatus() != 200) {
+            throw new SocialAuthException("Error while getting contacts from "
+                    + CONTACTS_URL + "Status : " + serviceResponse.getStatus());
+        }
+        String respStr;
+        try {
+            respStr = serviceResponse
+                    .getResponseBodyAsString(Constants.ENCODING);
+        } catch (Exception exc) {
+            throw new SocialAuthException("Failed to read response from  "
+                    + CONTACTS_URL, exc);
+        }
+        LOG.debug("User Contacts list in JSON " + respStr);
+        JSONObject resp = new JSONObject(respStr);
+        List<Contact> plist = new ArrayList<Contact>();
+        JSONArray items = new JSONArray();
+        if (resp.has("response")) {
+            JSONObject robj = resp.getJSONObject("response");
+            if (robj.has("friends")) {
+                JSONObject fobj = robj.getJSONObject("friends");
+                if (fobj.has("items")) {
+                    items = fobj.getJSONArray("items");
+                }
+            } else {
+                throw new SocialAuthException(
+                        "Failed to parse the user profile json : " + respStr);
+            }
+        } else {
+            throw new SocialAuthException(
+                    "Failed to parse the user profile json : " + respStr);
+        }
+        LOG.debug("Contacts Found : " + items.length());
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject obj = items.getJSONObject(i);
+            Contact c = new Contact();
+            c.setFirstName(obj.optString("firstName", null));
+            c.setLastName(obj.optString("lastName", null));
+            if (obj.has("id")) {
+                c.setProfileUrl(VIEW_PROFILE_URL + obj.get("id").toString());
+                c.setId(obj.get("id").toString());
+            }
+            if (obj.has("photo")) {
+                String photo = obj.getString("photo");
+                if (photo.length() > 1) {
+                    c.setProfileImageURL(photo);
+                }
+            }
+            if (config.isSaveRawResponse()) {
+                c.setRawResponse(obj.toString());
+            }
+            plist.add(c);
+        }
 
-		Response serviceResponse;
-		try {
-			serviceResponse = authenticationStrategy.executeFeed(CONTACTS_URL);
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting contacts from "
-					+ CONTACTS_URL, e);
-		}
-		if (serviceResponse.getStatus() != 200) {
-			throw new SocialAuthException("Error while getting contacts from "
-					+ CONTACTS_URL + "Status : " + serviceResponse.getStatus());
-		}
-		String respStr;
-		try {
-			respStr = serviceResponse
-					.getResponseBodyAsString(Constants.ENCODING);
-		} catch (Exception exc) {
-			throw new SocialAuthException("Failed to read response from  "
-					+ CONTACTS_URL, exc);
-		}
-		LOG.debug("User Contacts list in JSON " + respStr);
-		JSONObject resp = new JSONObject(respStr);
-		List<Contact> plist = new ArrayList<Contact>();
-		JSONArray items = new JSONArray();
-		if (resp.has("response")) {
-			JSONObject robj = resp.getJSONObject("response");
-			if (robj.has("friends")) {
-				JSONObject fobj = robj.getJSONObject("friends");
-				if (fobj.has("items")) {
-					items = fobj.getJSONArray("items");
-				}
-			} else {
-				throw new SocialAuthException(
-						"Failed to parse the user profile json : " + respStr);
-			}
-		} else {
-			throw new SocialAuthException(
-					"Failed to parse the user profile json : " + respStr);
-		}
-		LOG.debug("Contacts Found : " + items.length());
-		for (int i = 0; i < items.length(); i++) {
-			JSONObject obj = items.getJSONObject(i);
-			Contact c = new Contact();
-			c.setFirstName(obj.optString("firstName", null));
-			c.setLastName(obj.optString("lastName", null));
-			if (obj.has("id")) {
-				c.setProfileUrl(VIEW_PROFILE_URL + obj.get("id").toString());
-				c.setId(obj.get("id").toString());
-			}
-			if (obj.has("photo")) {
-				String photo = obj.getString("photo");
-				if (photo.length() > 1) {
-					c.setProfileImageURL(photo);
-				}
-			}
-			if (config.isSaveRawResponse()) {
-				c.setRawResponse(obj.toString());
-			}
-			plist.add(c);
-		}
+        return plist;
+    }
 
-		return plist;
-	}
+    /**
+     * Updates the status on the chosen provider if available. This may not be
+     * implemented for all providers.
+     *
+     * @param msg Message to be shown as user's status
+     * @throws Exception
+     */
+    @Override
+    public Response updateStatus(final String msg) throws Exception {
+        LOG.warn("WARNING: Not implemented for FourSquare");
+        throw new SocialAuthException(
+                "Update Status is not implemented for FourSquare");
+    }
 
-	/**
-	 * Updates the status on the chosen provider if available. This may not be
-	 * implemented for all providers.
-	 * 
-	 * @param msg
-	 *            Message to be shown as user's status
-	 * @throws Exception
-	 */
-	@Override
-	public Response updateStatus(final String msg) throws Exception {
-		LOG.warn("WARNING: Not implemented for FourSquare");
-		throw new SocialAuthException(
-				"Update Status is not implemented for FourSquare");
-	}
+    /**
+     * Logout
+     */
+    @Override
+    public void logout() {
+        accessToken = null;
+        authenticationStrategy.logout();
+    }
 
-	/**
-	 * Logout
-	 */
-	@Override
-	public void logout() {
-		accessToken = null;
-		authenticationStrategy.logout();
-	}
+    /**
+     * @param p Permission object which can be Permission.AUHTHENTICATE_ONLY,
+     *          Permission.ALL, Permission.DEFAULT
+     */
+    @Override
+    public void setPermission(final Permission p) {
+        LOG.debug("Permission requested : " + p.toString());
+        scope = p;
+    }
 
-	/**
-	 * 
-	 * @param p
-	 *            Permission object which can be Permission.AUHTHENTICATE_ONLY,
-	 *            Permission.ALL, Permission.DEFAULT
-	 */
-	@Override
-	public void setPermission(final Permission p) {
-		LOG.debug("Permission requested : " + p.toString());
-		scope = p;
-	}
+    /**
+     * Makes HTTP request to a given URL. It attaches access token in URL.
+     *
+     * @param url          URL to make HTTP request.
+     * @param methodType   Method type can be GET, POST or PUT
+     * @param params       Not in use for FourSquare api function. You can pass required
+     *                     parameter in query string.
+     * @param headerParams Parameters need to pass as Header Parameters
+     * @param body         Request Body
+     * @return Response object
+     * @throws Exception
+     */
+    @Override
+    public Response api(final String url, final String methodType,
+                        final Map<String, String> params,
+                        final Map<String, String> headerParams, final String body)
+            throws Exception {
+        Response response = null;
+        LOG.debug("Calling URL : " + url);
+        try {
+            response = authenticationStrategy.executeFeed(url, methodType,
+                    params, headerParams, body);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Error while making request to URL : " + url, e);
+        }
+        return response;
+    }
 
-	/**
-	 * Makes HTTP request to a given URL. It attaches access token in URL.
-	 * 
-	 * @param url
-	 *            URL to make HTTP request.
-	 * @param methodType
-	 *            Method type can be GET, POST or PUT
-	 * @param params
-	 *            Not in use for FourSquare api function. You can pass required
-	 *            parameter in query string.
-	 * @param headerParams
-	 *            Parameters need to pass as Header Parameters
-	 * @param body
-	 *            Request Body
-	 * @return Response object
-	 * @throws Exception
-	 */
-	@Override
-	public Response api(final String url, final String methodType,
-			final Map<String, String> params,
-			final Map<String, String> headerParams, final String body)
-			throws Exception {
-		Response response = null;
-		LOG.debug("Calling URL : " + url);
-		try {
-			response = authenticationStrategy.executeFeed(url, methodType,
-					params, headerParams, body);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Error while making request to URL : " + url, e);
-		}
-		return response;
-	}
+    /**
+     * Retrieves the user profile.
+     *
+     * @return Profile object containing the profile information.
+     */
+    @Override
+    public Profile getUserProfile() throws Exception {
+        if (userProfile == null && accessToken != null) {
+            getProfile();
+        }
+        return userProfile;
+    }
 
-	/**
-	 * Retrieves the user profile.
-	 * 
-	 * @return Profile object containing the profile information.
-	 */
-	@Override
-	public Profile getUserProfile() throws Exception {
-		if (userProfile == null && accessToken != null) {
-			getProfile();
-		}
-		return userProfile;
-	}
+    @Override
+    public AccessGrant getAccessGrant() {
+        return accessGrant;
+    }
 
-	@Override
-	public AccessGrant getAccessGrant() {
-		return accessGrant;
-	}
+    /**
+     * Stores access grant for the provider
+     *
+     * @param accessGrant It contains the access token and other information
+     * @throws AccessTokenExpireException
+     */
+    @Override
+    public void setAccessGrant(final AccessGrant accessGrant)
+            throws AccessTokenExpireException {
+        this.accessGrant = accessGrant;
+        accessToken = accessGrant.getKey();
+        authenticationStrategy.setAccessGrant(accessGrant);
+    }
 
-	@Override
-	public String getProviderId() {
-		return config.getId();
-	}
+    @Override
+    public String getProviderId() {
+        return config.getId();
+    }
 
-	@Override
-	public Response uploadImage(final String message, final String fileName,
-			final InputStream inputStream) throws Exception {
-		LOG.warn("WARNING: Not implemented for FourSquare");
-		throw new SocialAuthException(
-				"Update Status is not implemented for FourSquare");
-	}
+    @Override
+    public Response uploadImage(final String message, final String fileName,
+                                final InputStream inputStream) throws Exception {
+        LOG.warn("WARNING: Not implemented for FourSquare");
+        throw new SocialAuthException(
+                "Update Status is not implemented for FourSquare");
+    }
 
-	@Override
-	protected List<String> getPluginsList() {
-		List<String> list = new ArrayList<String>();
-		if (config.getRegisteredPlugins() != null
-				&& config.getRegisteredPlugins().length > 0) {
-			list.addAll(Arrays.asList(config.getRegisteredPlugins()));
-		}
-		return list;
-	}
+    @Override
+    protected List<String> getPluginsList() {
+        List<String> list = new ArrayList<String>();
+        if (config.getRegisteredPlugins() != null
+                && config.getRegisteredPlugins().length > 0) {
+            list.addAll(Arrays.asList(config.getRegisteredPlugins()));
+        }
+        return list;
+    }
 
-	@Override
-	protected OAuthStrategyBase getOauthStrategy() {
-		return authenticationStrategy;
-	}
+    @Override
+    protected OAuthStrategyBase getOauthStrategy() {
+        return authenticationStrategy;
+    }
 }

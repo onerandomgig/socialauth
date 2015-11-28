@@ -24,23 +24,22 @@
  */
 package org.brickred.socialauth.plugin;
 
-import java.util.List;
-
 import org.brickred.socialauth.Feed;
+
+import java.util.List;
 
 /**
  * Provides the functionality related to feeds
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public interface FeedPlugin extends Plugin {
 
-	/**
-	 * Returns the list of feed
-	 * 
-	 * @return List of feed
-	 * @throws Exception
-	 */
-	public List<Feed> getFeeds() throws Exception;
+    /**
+     * Returns the list of feed
+     *
+     * @return List of feed
+     * @throws Exception
+     */
+    public List<Feed> getFeeds() throws Exception;
 }

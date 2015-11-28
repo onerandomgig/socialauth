@@ -24,89 +24,80 @@
  */
 package org.brickred.socialauth.util;
 
-import java.util.Map;
-
 import org.brickred.socialauth.exception.SocialAuthException;
 import org.brickred.socialauth.oauthstrategy.OAuthStrategyBase;
+
+import java.util.Map;
 
 /**
  * This provides the functionality to make OAuth specific HTTP call for a
  * provider
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class ProviderSupport {
-	private OAuthStrategyBase authenticationStrategy;
+    private OAuthStrategyBase authenticationStrategy;
 
-	/**
-	 * 
-	 * @param strategy
-	 *            OAuth strategy object
-	 */
-	public ProviderSupport(final OAuthStrategyBase strategy) {
-		this.authenticationStrategy = strategy;
-	}
+    /**
+     * @param strategy OAuth strategy object
+     */
+    public ProviderSupport(final OAuthStrategyBase strategy) {
+        this.authenticationStrategy = strategy;
+    }
 
-	/**
-	 * Makes OAuth signed HTTP request to a given URL.
-	 * 
-	 * @param url
-	 *            URL to make HTTP request.
-	 * @param methodType
-	 *            Method type can be GET, POST or PUT
-	 * @param params
-	 *            Any additional parameters whose signature need to compute.
-	 *            Only used in case of "POST" and "PUT" method type.
-	 * @param headerParams
-	 *            Any additional parameters need to pass as Header Parameters
-	 * @param body
-	 *            Request Body
-	 * @return Response object
-	 * @throws Exception
-	 */
-	public Response api(final String url, final String methodType,
-			final Map<String, String> params,
-			final Map<String, String> headerParams, final String body)
-			throws Exception {
-		Response response = null;
-		try {
-			response = authenticationStrategy.executeFeed(url, methodType,
-					params, headerParams, body);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Error while making request to URL : " + url, e);
-		}
-		return response;
-	}
+    /**
+     * Makes OAuth signed HTTP request to a given URL.
+     *
+     * @param url          URL to make HTTP request.
+     * @param methodType   Method type can be GET, POST or PUT
+     * @param params       Any additional parameters whose signature need to compute.
+     *                     Only used in case of "POST" and "PUT" method type.
+     * @param headerParams Any additional parameters need to pass as Header Parameters
+     * @param body         Request Body
+     * @return Response object
+     * @throws Exception
+     */
+    public Response api(final String url, final String methodType,
+                        final Map<String, String> params,
+                        final Map<String, String> headerParams, final String body)
+            throws Exception {
+        Response response = null;
+        try {
+            response = authenticationStrategy.executeFeed(url, methodType,
+                    params, headerParams, body);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Error while making request to URL : " + url, e);
+        }
+        return response;
+    }
 
-	/**
-	 * Makes OAuth signed HTTP GET request to a given URL.
-	 * 
-	 * @param url
-	 *            URL to make HTTP request.
-	 * @return Response object
-	 * @throws Exception
-	 */
-	public Response api(final String url) throws Exception {
-		Response response = null;
-		try {
-			response = authenticationStrategy.executeFeed(url,
-					MethodType.GET.toString(), null, null, null);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Error while making request to URL : " + url, e);
-		}
-		return response;
-	}
+    /**
+     * Makes OAuth signed HTTP GET request to a given URL.
+     *
+     * @param url URL to make HTTP request.
+     * @return Response object
+     * @throws Exception
+     */
+    public Response api(final String url) throws Exception {
+        Response response = null;
+        try {
+            response = authenticationStrategy.executeFeed(url,
+                    MethodType.GET.toString(), null, null, null);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Error while making request to URL : " + url, e);
+        }
+        return response;
+    }
 
-	/**
-	 * Retrieves the AccessGrant object.
-	 * 
-	 * @return AccessGrant object.
-	 */
-	public AccessGrant getAccessGrant() {
-		return authenticationStrategy.getAccessGrant();
-	}
+    /**
+     * Retrieves the AccessGrant object.
+     *
+     * @return AccessGrant object.
+     */
+    public AccessGrant getAccessGrant() {
+        return authenticationStrategy.getAccessGrant();
+    }
 
 }

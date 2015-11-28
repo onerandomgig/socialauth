@@ -26,11 +26,6 @@
 
 package org.brickred.socialauth.plugin.instagram;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.Feed;
@@ -42,74 +37,79 @@ import org.brickred.socialauth.util.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 public class FeedPluginImpl implements FeedPlugin, Serializable {
 
-	/**
-	 * Feed implementation for Instagram
-	 * 
-	 * @author Dimitri Nicolopoulos
-	 */
-	private static final long serialVersionUID = 7322246222894929129L;
+    /**
+     * Feed implementation for Instagram
+     *
+     * @author Dimitri Nicolopoulos
+     */
+    private static final long serialVersionUID = 7322246222894929129L;
 
-	private static final String FEED_URL = "https://api.instagram.com/v1/users/self/feed";
-	private final Log LOG = LogFactory.getLog(FeedPluginImpl.class);
+    private static final String FEED_URL = "https://api.instagram.com/v1/users/self/feed";
+    private final Log LOG = LogFactory.getLog(FeedPluginImpl.class);
 
-	private ProviderSupport providerSupport;
+    private ProviderSupport providerSupport;
 
-	public FeedPluginImpl(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    public FeedPluginImpl(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 
-	@Override
-	/**
-	 * The message field of the feeds includes the urls of the images
-	 */
-	public List<Feed> getFeeds() throws Exception {
-		List<Feed> list = new ArrayList<Feed>();
-		try {
-			Response response = providerSupport.api(FEED_URL);
-			String respStr = response
-					.getResponseBodyAsString(Constants.ENCODING);
-			LOG.debug("Feed Json response :: " + respStr);
-			JSONObject resp = new JSONObject(respStr);
-			JSONArray data = resp.getJSONArray("data");
-			LOG.debug("Feeds count : " + data.length());
-			for (int i = 0; i < data.length(); i++) {
-				Feed feed = new Feed();
-				JSONObject obj = data.getJSONObject(i);
-				if (obj.has("images")) {
-					JSONObject iobj = obj.getJSONObject("images");
-					if (iobj.has("low_resolution")) {
-						feed.setMessage(iobj.getJSONObject("low_resolution")
-								.optString("url"));
-					}
-				}
-				if (obj.has("user")) {
-					JSONObject iobj = obj.getJSONObject("user");
-					feed.setFrom(iobj.optString("full_name", null));
-					feed.setId(iobj.optString("id", null));
-					feed.setScreenName(iobj.optString("username", null));
-				}
-				String createdTime = obj.optString("created_time", null);
-				if (createdTime != null) {
-					feed.setCreatedAt(new Date(Integer.parseInt(createdTime)));
-				}
-				list.add(feed);
-			}
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting Feeds from "
-					+ FEED_URL, e);
-		}
-		return list;
-	}
+    @Override
+    /**
+     * The message field of the feeds includes the urls of the images
+     */
+    public List<Feed> getFeeds() throws Exception {
+        List<Feed> list = new ArrayList<Feed>();
+        try {
+            Response response = providerSupport.api(FEED_URL);
+            String respStr = response
+                    .getResponseBodyAsString(Constants.ENCODING);
+            LOG.debug("Feed Json response :: " + respStr);
+            JSONObject resp = new JSONObject(respStr);
+            JSONArray data = resp.getJSONArray("data");
+            LOG.debug("Feeds count : " + data.length());
+            for (int i = 0; i < data.length(); i++) {
+                Feed feed = new Feed();
+                JSONObject obj = data.getJSONObject(i);
+                if (obj.has("images")) {
+                    JSONObject iobj = obj.getJSONObject("images");
+                    if (iobj.has("low_resolution")) {
+                        feed.setMessage(iobj.getJSONObject("low_resolution")
+                                .optString("url"));
+                    }
+                }
+                if (obj.has("user")) {
+                    JSONObject iobj = obj.getJSONObject("user");
+                    feed.setFrom(iobj.optString("full_name", null));
+                    feed.setId(iobj.optString("id", null));
+                    feed.setScreenName(iobj.optString("username", null));
+                }
+                String createdTime = obj.optString("created_time", null);
+                if (createdTime != null) {
+                    feed.setCreatedAt(new Date(Integer.parseInt(createdTime)));
+                }
+                list.add(feed);
+            }
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting Feeds from "
+                    + FEED_URL, e);
+        }
+        return list;
+    }
 
-	@Override
-	public ProviderSupport getProviderSupport() {
-		return providerSupport;
-	}
+    @Override
+    public ProviderSupport getProviderSupport() {
+        return providerSupport;
+    }
 
-	@Override
-	public void setProviderSupport(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    @Override
+    public void setProviderSupport(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 }

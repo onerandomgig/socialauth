@@ -29,151 +29,144 @@ import java.util.List;
 
 /**
  * Contains the Album info
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class Album implements Serializable {
 
-	private static final long serialVersionUID = 4987858003739130638L;
+    private static final long serialVersionUID = 4987858003739130638L;
+    List<Photo> photos;
+    private String id;
+    private String name;
+    private String link;
+    private String coverPhoto;
+    private int photosCount;
 
-	private String id;
-	private String name;
-	private String link;
-	private String coverPhoto;
-	private int photosCount;
-	List<Photo> photos;
+    /**
+     * Retrieves the album id
+     *
+     * @return album id
+     */
+    public String getId() {
+        return id;
+    }
 
-	/**
-	 * Retrieves the album id
-	 * 
-	 * @return album id
-	 */
-	public String getId() {
-		return id;
-	}
+    /**
+     * Updates the album id
+     *
+     * @param id album id
+     */
+    public void setId(final String id) {
+        this.id = id;
+    }
 
-	/**
-	 * Updates the album id
-	 * 
-	 * @param id
-	 *            album id
-	 */
-	public void setId(final String id) {
-		this.id = id;
-	}
+    /**
+     * Retrieves the album name
+     *
+     * @return album name
+     */
+    public String getName() {
+        return name;
+    }
 
-	/**
-	 * Retrieves the album name
-	 * 
-	 * @return album name
-	 */
-	public String getName() {
-		return name;
-	}
+    /**
+     * Updates the album nane
+     *
+     * @param name album name
+     */
+    public void setName(final String name) {
+        this.name = name;
+    }
 
-	/**
-	 * Updates the album nane
-	 * 
-	 * @param name
-	 *            album name
-	 */
-	public void setName(final String name) {
-		this.name = name;
-	}
+    /**
+     * Retrieves the album view link
+     *
+     * @return
+     */
+    public String getLink() {
+        return link;
+    }
 
-	/**
-	 * Retrieves the album view link
-	 * 
-	 * @return
-	 */
-	public String getLink() {
-		return link;
-	}
+    /**
+     * Updates the album view link
+     *
+     * @param link album link
+     */
+    public void setLink(final String link) {
+        this.link = link;
+    }
 
-	/**
-	 * Updates the album view link
-	 * 
-	 * @param link
-	 *            album link
-	 */
-	public void setLink(final String link) {
-		this.link = link;
-	}
+    /**
+     * Retrieves the URL of album cover photo
+     *
+     * @return album cover photo URL string
+     */
+    public String getCoverPhoto() {
+        return coverPhoto;
+    }
 
-	/**
-	 * Retrieves the URL of album cover photo
-	 * 
-	 * @return album cover photo URL string
-	 */
-	public String getCoverPhoto() {
-		return coverPhoto;
-	}
+    /**
+     * Updates the album cover photo URL string
+     *
+     * @param coverPhoto album cover photo URL string
+     */
+    public void setCoverPhoto(final String coverPhoto) {
+        this.coverPhoto = coverPhoto;
+    }
 
-	/**
-	 * Updates the album cover photo URL string
-	 * 
-	 * @param coverPhoto
-	 *            album cover photo URL string
-	 */
-	public void setCoverPhoto(final String coverPhoto) {
-		this.coverPhoto = coverPhoto;
-	}
+    /**
+     * Retrieves the album photos count
+     *
+     * @return album photos count
+     */
+    public int getPhotosCount() {
+        return photosCount;
+    }
 
-	/**
-	 * Retrieves the album photos count
-	 * 
-	 * @return album photos count
-	 */
-	public int getPhotosCount() {
-		return photosCount;
-	}
+    /**
+     * Updates the album photo count
+     *
+     * @param photosCount album photos count
+     */
+    public void setPhotosCount(final int photosCount) {
+        this.photosCount = photosCount;
+    }
 
-	/**
-	 * Updates the album photo count
-	 * 
-	 * @param photosCount
-	 *            album photos count
-	 */
-	public void setPhotosCount(final int photosCount) {
-		this.photosCount = photosCount;
-	}
+    /**
+     * Retrieves the list of albmun photos
+     *
+     * @return
+     */
+    public List<Photo> getPhotos() {
+        return photos;
+    }
 
-	/**
-	 * Retrieves the list of albmun photos
-	 * 
-	 * @return
-	 */
-	public List<Photo> getPhotos() {
-		return photos;
-	}
+    /**
+     * Updates the list of album photos
+     *
+     * @param photos
+     */
+    public void setPhotos(final List<Photo> photos) {
+        this.photos = photos;
+    }
 
-	/**
-	 * Updates the list of album photos
-	 * 
-	 * @param photos
-	 */
-	public void setPhotos(final List<Photo> photos) {
-		this.photos = photos;
-	}
-
-	/**
-	 * Retrieves the Album as a string
-	 * 
-	 * @return String
-	 */
-	@Override
-	public String toString() {
-		StringBuilder result = new StringBuilder();
-		String NEW_LINE = System.getProperty("line.separator");
-		result.append(this.getClass().getName() + " Object {" + NEW_LINE);
-		result.append(" id: " + id + NEW_LINE);
-		result.append(" name: " + name + NEW_LINE);
-		result.append(" coverPhoto: " + coverPhoto + NEW_LINE);
-		result.append(" link: " + link + NEW_LINE);
-		result.append(" photosCount: " + photosCount + NEW_LINE);
-		result.append(" photos: " + photos + NEW_LINE);
-		result.append("}");
-		return result.toString();
-	}
+    /**
+     * Retrieves the Album as a string
+     *
+     * @return String
+     */
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        String NEW_LINE = System.getProperty("line.separator");
+        result.append(this.getClass().getName() + " Object {" + NEW_LINE);
+        result.append(" id: " + id + NEW_LINE);
+        result.append(" name: " + name + NEW_LINE);
+        result.append(" coverPhoto: " + coverPhoto + NEW_LINE);
+        result.append(" link: " + link + NEW_LINE);
+        result.append(" photosCount: " + photosCount + NEW_LINE);
+        result.append(" photos: " + photos + NEW_LINE);
+        result.append("}");
+        return result.toString();
+    }
 }

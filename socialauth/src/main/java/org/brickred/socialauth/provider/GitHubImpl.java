@@ -25,13 +25,6 @@
 
 package org.brickred.socialauth.provider;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.AbstractProvider;
@@ -44,255 +37,251 @@ import org.brickred.socialauth.exception.SocialAuthException;
 import org.brickred.socialauth.exception.UserDeniedPermissionException;
 import org.brickred.socialauth.oauthstrategy.OAuth2;
 import org.brickred.socialauth.oauthstrategy.OAuthStrategyBase;
-import org.brickred.socialauth.util.AccessGrant;
-import org.brickred.socialauth.util.Constants;
-import org.brickred.socialauth.util.MethodType;
-import org.brickred.socialauth.util.OAuthConfig;
-import org.brickred.socialauth.util.Response;
+import org.brickred.socialauth.util.*;
 import org.json.JSONObject;
+
+import java.io.InputStream;
+import java.util.*;
 
 /**
  * Provider implementation for GitHub
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class GitHubImpl extends AbstractProvider {
 
-	private static final long serialVersionUID = -3529658778980357392L;
-	private static final String PROFILE_URL = "https://api.github.com/user";
-	private static final Map<String, String> ENDPOINTS;
-	private final Log LOG = LogFactory.getLog(this.getClass());
+    private static final long serialVersionUID = -3529658778980357392L;
+    private static final String PROFILE_URL = "https://api.github.com/user";
+    private static final Map<String, String> ENDPOINTS;
+    private static final String[] AllPerms = new String[]{"user",
+            "user:email"};
+    private static final String[] AuthPerms = new String[]{"user",
+            "user:email"};
 
-	private Permission scope;
-	private OAuthConfig config;
-	private Profile userProfile;
-	private AccessGrant accessGrant;
-	private OAuthStrategyBase authenticationStrategy;
+    static {
+        ENDPOINTS = new HashMap<String, String>();
+        ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                "https://github.com/login/oauth/authorize");
+        ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                "https://github.com/login/oauth/access_token");
+    }
 
-	private static final String[] AllPerms = new String[] { "user",
-			"user:email" };
-	private static final String[] AuthPerms = new String[] { "user",
-			"user:email" };
+    private final Log LOG = LogFactory.getLog(this.getClass());
+    private Permission scope;
+    private OAuthConfig config;
+    private Profile userProfile;
+    private AccessGrant accessGrant;
+    private OAuthStrategyBase authenticationStrategy;
 
-	static {
-		ENDPOINTS = new HashMap<String, String>();
-		ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-				"https://github.com/login/oauth/authorize");
-		ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-				"https://github.com/login/oauth/access_token");
-	}
+    /**
+     * Stores configuration for the provider
+     *
+     * @param providerConfig It contains the configuration of application like consumer key
+     *                       and consumer secret
+     * @throws Exception
+     */
+    public GitHubImpl(final OAuthConfig providerConfig) throws Exception {
+        config = providerConfig;
+        if (config.getCustomPermissions() != null) {
+            scope = Permission.CUSTOM;
+        }
 
-	/**
-	 * Stores configuration for the provider
-	 * 
-	 * @param providerConfig
-	 *            It contains the configuration of application like consumer key
-	 *            and consumer secret
-	 * @throws Exception
-	 */
-	public GitHubImpl(final OAuthConfig providerConfig) throws Exception {
-		config = providerConfig;
-		if (config.getCustomPermissions() != null) {
-			scope = Permission.CUSTOM;
-		}
+        if (config.getAuthenticationUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                    config.getAuthenticationUrl());
+        } else {
+            config.setAuthenticationUrl(ENDPOINTS
+                    .get(Constants.OAUTH_AUTHORIZATION_URL));
+        }
 
-		if (config.getAuthenticationUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-					config.getAuthenticationUrl());
-		} else {
-			config.setAuthenticationUrl(ENDPOINTS
-					.get(Constants.OAUTH_AUTHORIZATION_URL));
-		}
+        if (config.getAccessTokenUrl() != null) {
+            ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                    config.getAccessTokenUrl());
+        } else {
+            config.setAccessTokenUrl(ENDPOINTS
+                    .get(Constants.OAUTH_ACCESS_TOKEN_URL));
+        }
 
-		if (config.getAccessTokenUrl() != null) {
-			ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-					config.getAccessTokenUrl());
-		} else {
-			config.setAccessTokenUrl(ENDPOINTS
-					.get(Constants.OAUTH_ACCESS_TOKEN_URL));
-		}
+        authenticationStrategy = new OAuth2(config, ENDPOINTS);
+        authenticationStrategy.setPermission(scope);
+        authenticationStrategy.setScope(getScope());
+    }
 
-		authenticationStrategy = new OAuth2(config, ENDPOINTS);
-		authenticationStrategy.setPermission(scope);
-		authenticationStrategy.setScope(getScope());
-	}
+    @Override
+    public String getLoginRedirectURL(final String successUrl) throws Exception {
+        return authenticationStrategy.getLoginRedirectURL(successUrl);
+    }
 
-	@Override
-	public String getLoginRedirectURL(final String successUrl) throws Exception {
-		return authenticationStrategy.getLoginRedirectURL(successUrl);
-	}
+    @Override
+    public Profile verifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        return doVerifyResponse(requestParams);
+    }
 
-	@Override
-	public Profile verifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		return doVerifyResponse(requestParams);
-	}
+    private Profile doVerifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        LOG.info("Retrieving Access Token in verify response function");
+        if (requestParams.get("error_reason") != null
+                && "user_denied".equals(requestParams.get("error_reason"))) {
+            throw new UserDeniedPermissionException();
+        }
+        accessGrant = authenticationStrategy.verifyResponse(requestParams,
+                MethodType.POST.toString());
 
-	private Profile doVerifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		LOG.info("Retrieving Access Token in verify response function");
-		if (requestParams.get("error_reason") != null
-				&& "user_denied".equals(requestParams.get("error_reason"))) {
-			throw new UserDeniedPermissionException();
-		}
-		accessGrant = authenticationStrategy.verifyResponse(requestParams,
-				MethodType.POST.toString());
+        if (accessGrant != null) {
+            LOG.debug("Obtaining user profile");
+            return getProfile();
+        } else {
+            throw new SocialAuthException("Access token not found");
+        }
+    }
 
-		if (accessGrant != null) {
-			LOG.debug("Obtaining user profile");
-			return getProfile();
-		} else {
-			throw new SocialAuthException("Access token not found");
-		}
-	}
+    private Profile getProfile() throws Exception {
+        String presp;
 
-	private Profile getProfile() throws Exception {
-		String presp;
+        try {
+            Response response = authenticationStrategy.executeFeed(PROFILE_URL);
+            presp = response.getResponseBodyAsString(Constants.ENCODING);
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting profile from "
+                    + PROFILE_URL, e);
+        }
+        try {
+            LOG.debug("User Profile : " + presp);
+            JSONObject resp = new JSONObject(presp);
+            Profile p = new Profile();
+            p.setValidatedId(resp.optString("id", null));
+            p.setFullName(resp.optString("name", null));
+            p.setEmail(resp.optString("email", null));
+            p.setLocation(resp.optString("location", null));
+            p.setProfileImageURL(resp.optString("avatar_url", null));
+            p.setDisplayName(resp.optString("login", null));
+            p.setProviderId(getProviderId());
+            if (config.isSaveRawResponse()) {
+                p.setRawResponse(presp);
+            }
+            userProfile = p;
+            return p;
+        } catch (Exception ex) {
+            throw new ServerDataException(
+                    "Failed to parse the user profile json : " + presp, ex);
+        }
+    }
 
-		try {
-			Response response = authenticationStrategy.executeFeed(PROFILE_URL);
-			presp = response.getResponseBodyAsString(Constants.ENCODING);
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting profile from "
-					+ PROFILE_URL, e);
-		}
-		try {
-			LOG.debug("User Profile : " + presp);
-			JSONObject resp = new JSONObject(presp);
-			Profile p = new Profile();
-			p.setValidatedId(resp.optString("id", null));
-			p.setFullName(resp.optString("name", null));
-			p.setEmail(resp.optString("email", null));
-			p.setLocation(resp.optString("location", null));
-			p.setProfileImageURL(resp.optString("avatar_url", null));
-			p.setDisplayName(resp.optString("login", null));
-			p.setProviderId(getProviderId());
-			if (config.isSaveRawResponse()) {
-				p.setRawResponse(presp);
-			}
-			userProfile = p;
-			return p;
-		} catch (Exception ex) {
-			throw new ServerDataException(
-					"Failed to parse the user profile json : " + presp, ex);
-		}
-	}
+    @Override
+    public Response updateStatus(final String msg) throws Exception {
+        LOG.warn("WARNING: Not implemented for GitHub");
+        throw new SocialAuthException(
+                "Update Status is not implemented for GitHub");
+    }
 
-	@Override
-	public Response updateStatus(final String msg) throws Exception {
-		LOG.warn("WARNING: Not implemented for GitHub");
-		throw new SocialAuthException(
-				"Update Status is not implemented for GitHub");
-	}
+    @Override
+    public List<Contact> getContactList() throws Exception {
+        LOG.warn("WARNING: Not implemented for GitHub");
+        throw new SocialAuthException(
+                "Get contact list is not implemented for GitHub");
+    }
 
-	@Override
-	public List<Contact> getContactList() throws Exception {
-		LOG.warn("WARNING: Not implemented for GitHub");
-		throw new SocialAuthException(
-				"Get contact list is not implemented for GitHub");
-	}
+    @Override
+    public Profile getUserProfile() throws Exception {
+        if (userProfile == null && accessGrant != null) {
+            getProfile();
+        }
+        return userProfile;
+    }
 
-	@Override
-	public Profile getUserProfile() throws Exception {
-		if (userProfile == null && accessGrant != null) {
-			getProfile();
-		}
-		return userProfile;
-	}
+    @Override
+    public void logout() {
+        accessGrant = null;
+        authenticationStrategy.logout();
+    }
 
-	@Override
-	public void logout() {
-		accessGrant = null;
-		authenticationStrategy.logout();
-	}
+    @Override
+    public void setPermission(final Permission p) {
+        LOG.debug("Permission requested : " + p.toString());
+        this.scope = p;
+        authenticationStrategy.setPermission(this.scope);
+        authenticationStrategy.setScope(getScope());
+    }
 
-	@Override
-	public void setPermission(final Permission p) {
-		LOG.debug("Permission requested : " + p.toString());
-		this.scope = p;
-		authenticationStrategy.setPermission(this.scope);
-		authenticationStrategy.setScope(getScope());
-	}
+    @Override
+    public Response api(final String url, final String methodType,
+                        final Map<String, String> params,
+                        final Map<String, String> headerParams, final String body)
+            throws Exception {
+        LOG.info("Calling api function for url	:	" + url);
+        Response response = null;
+        try {
+            response = authenticationStrategy.executeFeed(url, methodType,
+                    params, headerParams, body);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Error while making request to URL : " + url, e);
+        }
+        return response;
+    }
 
-	@Override
-	public Response api(final String url, final String methodType,
-			final Map<String, String> params,
-			final Map<String, String> headerParams, final String body)
-			throws Exception {
-		LOG.info("Calling api function for url	:	" + url);
-		Response response = null;
-		try {
-			response = authenticationStrategy.executeFeed(url, methodType,
-					params, headerParams, body);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Error while making request to URL : " + url, e);
-		}
-		return response;
-	}
+    @Override
+    public AccessGrant getAccessGrant() {
+        return accessGrant;
+    }
 
-	@Override
-	public AccessGrant getAccessGrant() {
-		return accessGrant;
-	}
+    @Override
+    public void setAccessGrant(final AccessGrant accessGrant)
+            throws AccessTokenExpireException, SocialAuthException {
+        this.accessGrant = accessGrant;
+        authenticationStrategy.setAccessGrant(accessGrant);
 
-	@Override
-	public String getProviderId() {
-		return config.getId();
-	}
+    }
 
-	@Override
-	public void setAccessGrant(final AccessGrant accessGrant)
-			throws AccessTokenExpireException, SocialAuthException {
-		this.accessGrant = accessGrant;
-		authenticationStrategy.setAccessGrant(accessGrant);
+    @Override
+    public String getProviderId() {
+        return config.getId();
+    }
 
-	}
+    @Override
+    public Response uploadImage(final String message, final String fileName,
+                                final InputStream inputStream) throws Exception {
+        LOG.warn("WARNING: Not implemented for GitHub");
+        throw new SocialAuthException(
+                "Upload Image is not implemented for GitHub");
+    }
 
-	@Override
-	public Response uploadImage(final String message, final String fileName,
-			final InputStream inputStream) throws Exception {
-		LOG.warn("WARNING: Not implemented for GitHub");
-		throw new SocialAuthException(
-				"Upload Image is not implemented for GitHub");
-	}
+    @Override
+    protected List<String> getPluginsList() {
+        List<String> list = new ArrayList<String>();
+        if (config.getRegisteredPlugins() != null
+                && config.getRegisteredPlugins().length > 0) {
+            list.addAll(Arrays.asList(config.getRegisteredPlugins()));
+        }
+        return list;
+    }
 
-	@Override
-	protected List<String> getPluginsList() {
-		List<String> list = new ArrayList<String>();
-		if (config.getRegisteredPlugins() != null
-				&& config.getRegisteredPlugins().length > 0) {
-			list.addAll(Arrays.asList(config.getRegisteredPlugins()));
-		}
-		return list;
-	}
+    @Override
+    protected OAuthStrategyBase getOauthStrategy() {
+        return authenticationStrategy;
+    }
 
-	@Override
-	protected OAuthStrategyBase getOauthStrategy() {
-		return authenticationStrategy;
-	}
-
-	private String getScope() {
-		StringBuffer result = new StringBuffer();
-		String arr[] = null;
-		if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
-			arr = AuthPerms;
-		} else if (Permission.CUSTOM.equals(scope)
-				&& config.getCustomPermissions() != null) {
-			arr = config.getCustomPermissions().split(",");
-		} else {
-			arr = AllPerms;
-		}
-		result.append(arr[0]);
-		for (int i = 1; i < arr.length; i++) {
-			result.append(",").append(arr[i]);
-		}
-		String pluginScopes = getPluginsScope(config);
-		if (pluginScopes != null) {
-			result.append(",").append(pluginScopes);
-		}
-		return result.toString();
-	}
+    private String getScope() {
+        StringBuffer result = new StringBuffer();
+        String arr[] = null;
+        if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
+            arr = AuthPerms;
+        } else if (Permission.CUSTOM.equals(scope)
+                && config.getCustomPermissions() != null) {
+            arr = config.getCustomPermissions().split(",");
+        } else {
+            arr = AllPerms;
+        }
+        result.append(arr[0]);
+        for (int i = 1; i < arr.length; i++) {
+            result.append(",").append(arr[i]);
+        }
+        String pluginScopes = getPluginsScope(config);
+        if (pluginScopes != null) {
+            result.append(",").append(pluginScopes);
+        }
+        return result.toString();
+    }
 
 }

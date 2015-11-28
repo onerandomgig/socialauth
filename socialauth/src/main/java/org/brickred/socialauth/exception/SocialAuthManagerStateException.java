@@ -26,16 +26,16 @@ package org.brickred.socialauth.exception;
 
 public class SocialAuthManagerStateException extends Exception {
 
-	private static final long serialVersionUID = -4089035676676970803L;
-	private static final String errorMessage = "This is not the same SocailAuthManager object that was used for login.";
-	private static final String resolution = "Please check if you have called getAuthenticationUrl() method before calling connect()";
+    private static final long serialVersionUID = -4089035676676970803L;
+    private static final String errorMessage = "This is not the same SocailAuthManager object that was used for login.";
+    private static final String resolution = "Please check if you have called getAuthenticationUrl() method before calling connect()";
 
-	public SocialAuthManagerStateException() {
-		super();
-	}
+    public SocialAuthManagerStateException() {
+        super();
+    }
 
-	@Override
-	public String toString() {
-		return errorMessage + resolution;
-	}
+    @Override
+    public String toString() {
+        return errorMessage + resolution;
+    }
 }

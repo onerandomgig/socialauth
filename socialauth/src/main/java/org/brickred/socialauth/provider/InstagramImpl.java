@@ -26,13 +26,6 @@ Authors: Konstantinos Psychas / National Technical University of Athens
 
 package org.brickred.socialauth.provider;
 
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.AbstractProvider;
@@ -44,299 +37,296 @@ import org.brickred.socialauth.exception.SocialAuthException;
 import org.brickred.socialauth.exception.UserDeniedPermissionException;
 import org.brickred.socialauth.oauthstrategy.OAuth2;
 import org.brickred.socialauth.oauthstrategy.OAuthStrategyBase;
-import org.brickred.socialauth.util.AccessGrant;
-import org.brickred.socialauth.util.Constants;
-import org.brickred.socialauth.util.MethodType;
-import org.brickred.socialauth.util.OAuthConfig;
-import org.brickred.socialauth.util.Response;
+import org.brickred.socialauth.util.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.util.*;
+
 /**
  * Provider implementation for Instagram
- * 
+ *
  * @author Psychas Konstantinos
  */
 public class InstagramImpl extends AbstractProvider {
 
-	private static final long serialVersionUID = 6073346132625871229L;
-	public static final String CLASSID = "instagram";
+    public static final String CLASSID = "instagram";
+    private static final long serialVersionUID = 6073346132625871229L;
+    private static final String PROFILE_URL = "https://api.instagram.com/v1/users/self";
+    private static final String CONTACTS_URL = "https://api.instagram.com/v1/users/self/follows";
+    private static final String VIEW_PROFILE_URL = "http://instagram.com/";
+    private static final Map<String, String> ENDPOINTS;
+    // check http://instagram.com/developer/authentication/ to see supported
+    // permissions
+    private static final String[] AllPerms = new String[]{"basic",
+            "comments", "relationships", "likes"};
+    private static final String[] AuthPerms = new String[]{"basic"};
 
-	private static final String PROFILE_URL = "https://api.instagram.com/v1/users/self";
-	private static final String CONTACTS_URL = "https://api.instagram.com/v1/users/self/follows";
-	private static final String VIEW_PROFILE_URL = "http://instagram.com/";
-	private static final Map<String, String> ENDPOINTS;
-	private final Log LOG = LogFactory.getLog(InstagramImpl.class);
+    static {
+        ENDPOINTS = new HashMap<String, String>();
+        ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+                "https://api.instagram.com/oauth/authorize");
+        ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+                "https://api.instagram.com/oauth/access_token");
+    }
 
-	private OAuthConfig config;
-	private AccessGrant accessGrant;
-	private Profile userProfile;
-	private OAuthStrategyBase authenticationStrategy;// OAuth2 strategy
+    private final Log LOG = LogFactory.getLog(InstagramImpl.class);
+    private OAuthConfig config;
+    private AccessGrant accessGrant;
+    private Profile userProfile;
+    private OAuthStrategyBase authenticationStrategy;// OAuth2 strategy
 
-	// check http://instagram.com/developer/authentication/ to see supported
-	// permissions
-	private static final String[] AllPerms = new String[] { "basic",
-			"comments", "relationships", "likes" };
-	private static final String[] AuthPerms = new String[] { "basic" };
+    public InstagramImpl(final OAuthConfig providerConfig) throws Exception {
 
-	static {
-		ENDPOINTS = new HashMap<String, String>();
-		ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
-				"https://api.instagram.com/oauth/authorize");
-		ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
-				"https://api.instagram.com/oauth/access_token");
-	}
+        config = providerConfig;
 
-	public InstagramImpl(final OAuthConfig providerConfig) throws Exception {
+        authenticationStrategy = new OAuth2(config, ENDPOINTS);
 
-		config = providerConfig;
+        if (config.getCustomPermissions() != null) {
+            authenticationStrategy.setPermission(Permission.CUSTOM);
+            authenticationStrategy.setScope(getScope(Permission.CUSTOM));
+        }
+        /* no need to set access token name, default access_token */
+        config.setAuthenticationUrl(ENDPOINTS
+                .get(Constants.OAUTH_AUTHORIZATION_URL));
+        config.setAccessTokenUrl(ENDPOINTS
+                .get(Constants.OAUTH_ACCESS_TOKEN_URL));
+    }
 
-		authenticationStrategy = new OAuth2(config, ENDPOINTS);
+    private String getScope(final Permission scope) {
+        StringBuffer result = new StringBuffer();
+        String arr[];
+        if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
+            arr = AuthPerms;
+        } else if (Permission.CUSTOM.equals(scope)
+                && config.getCustomPermissions() != null) {
+            arr = config.getCustomPermissions().split(",");
+        } else {
+            arr = AllPerms;
+        }
+        result.append(arr[0]);
+        for (int i = 1; i < arr.length; i++) {
+            result.append(",").append(arr[i]);
+        }
+        String pluginScopes = getPluginsScope(config);
+        if (pluginScopes != null) {
+            result.append(",").append(pluginScopes);
+        }
+        return result.toString();
+    }
 
-		if (config.getCustomPermissions() != null) {
-			authenticationStrategy.setPermission(Permission.CUSTOM);
-			authenticationStrategy.setScope(getScope(Permission.CUSTOM));
-		}
-		/* no need to set access token name, default access_token */
-		config.setAuthenticationUrl(ENDPOINTS
-				.get(Constants.OAUTH_AUTHORIZATION_URL));
-		config.setAccessTokenUrl(ENDPOINTS
-				.get(Constants.OAUTH_ACCESS_TOKEN_URL));
-	}
+    @Override
+    public Response api(final String url, final String methodType,
+                        final Map<String, String> params,
+                        final Map<String, String> headerParams, final String body)
+            throws Exception {
 
-	private String getScope(final Permission scope) {
-		StringBuffer result = new StringBuffer();
-		String arr[];
-		if (Permission.AUTHENTICATE_ONLY.equals(scope)) {
-			arr = AuthPerms;
-		} else if (Permission.CUSTOM.equals(scope)
-				&& config.getCustomPermissions() != null) {
-			arr = config.getCustomPermissions().split(",");
-		} else {
-			arr = AllPerms;
-		}
-		result.append(arr[0]);
-		for (int i = 1; i < arr.length; i++) {
-			result.append(",").append(arr[i]);
-		}
-		String pluginScopes = getPluginsScope(config);
-		if (pluginScopes != null) {
-			result.append(",").append(pluginScopes);
-		}
-		return result.toString();
-	}
+        LOG.debug("Calling URL : " + url);
+        try {
+            return authenticationStrategy.executeFeed(url, methodType, params,
+                    headerParams, body);
+        } catch (Exception e) {
+            throw new SocialAuthException("Error : " + e.getMessage()
+                    + "- while making request to URL : " + url, e);
+        }
+    }
 
-	@Override
-	public Response api(final String url, final String methodType,
-			final Map<String, String> params,
-			final Map<String, String> headerParams, final String body)
-			throws Exception {
+    @Override
+    public AccessGrant getAccessGrant() {
+        return accessGrant;
+    }
 
-		LOG.debug("Calling URL : " + url);
-		try {
-			return authenticationStrategy.executeFeed(url, methodType, params,
-					headerParams, body);
-		} catch (Exception e) {
-			throw new SocialAuthException("Error : " + e.getMessage()
-					+ "- while making request to URL : " + url, e);
-		}
-	}
+    @Override
+    public void setAccessGrant(final AccessGrant accessGrant)
+            throws AccessTokenExpireException {
+        this.accessGrant = accessGrant;
+        authenticationStrategy.setAccessGrant(accessGrant);
+    }
 
-	@Override
-	public AccessGrant getAccessGrant() {
-		return accessGrant;
-	}
+    @Override
+    public List<Contact> getContactList() throws Exception {
+        LOG.info("Fetching contacts from " + CONTACTS_URL);
+        Response serviceResponse;
+        try {
+            serviceResponse = authenticationStrategy.executeFeed(CONTACTS_URL);
+        } catch (Exception e) {
+            throw new SocialAuthException("Error : " + e.getMessage()
+                    + " - while getting contacts from " + CONTACTS_URL, e);
+        }
 
-	@Override
-	public List<Contact> getContactList() throws Exception {
-		LOG.info("Fetching contacts from " + CONTACTS_URL);
-		Response serviceResponse;
-		try {
-			serviceResponse = authenticationStrategy.executeFeed(CONTACTS_URL);
-		} catch (Exception e) {
-			throw new SocialAuthException("Error : " + e.getMessage()
-					+ " - while getting contacts from " + CONTACTS_URL, e);
-		}
+        if (serviceResponse.getStatus() != 200) {
+            throw new SocialAuthException("Error while getting contacts from "
+                    + CONTACTS_URL + "Status : " + serviceResponse.getStatus());
+        }
 
-		if (serviceResponse.getStatus() != 200) {
-			throw new SocialAuthException("Error while getting contacts from "
-					+ CONTACTS_URL + "Status : " + serviceResponse.getStatus());
-		}
+        String respStr = serviceResponse
+                .getResponseBodyAsString(Constants.ENCODING);
+        LOG.debug("Contacts JSON string :: " + respStr);
+        List<Contact> plist = new ArrayList<Contact>();
 
-		String respStr = serviceResponse
-				.getResponseBodyAsString(Constants.ENCODING);
-		LOG.debug("Contacts JSON string :: " + respStr);
-		List<Contact> plist = new ArrayList<Contact>();
+        JSONObject resp = new JSONObject(respStr);
+        JSONArray data = resp.optJSONArray("data");
+        if (data != null) {
+            for (int i = 0; i < data.length(); i++) {
+                JSONObject obj = data.getJSONObject(i);
+                Contact p = new Contact();
+                String id = obj.optString("id", null);
+                p.setId(id);
+                String full_name = obj.optString("full_name", null);
+                p.setDisplayName(full_name);
+                if (full_name != null) {
+                    String[] names = full_name.split(" ");
+                    if (names.length > 1) {
+                        p.setFirstName(names[0]);
+                        p.setLastName(names[1]);
+                    } else {
+                        p.setFirstName(full_name);
+                    }
+                }
+                String username = obj.optString("username", null);
+                p.setProfileUrl(VIEW_PROFILE_URL + username);
+                p.setProfileImageURL(obj.optString("profile_picture"));
+                if (config.isSaveRawResponse()) {
+                    p.setRawResponse(obj.toString());
+                }
+                plist.add(p);
+            }
+        }
+        return plist;
+    }
 
-		JSONObject resp = new JSONObject(respStr);
-		JSONArray data = resp.optJSONArray("data");
-		if (data != null) {
-			for (int i = 0; i < data.length(); i++) {
-				JSONObject obj = data.getJSONObject(i);
-				Contact p = new Contact();
-				String id = obj.optString("id", null);
-				p.setId(id);
-				String full_name = obj.optString("full_name", null);
-				p.setDisplayName(full_name);
-				if (full_name != null) {
-					String[] names = full_name.split(" ");
-					if (names.length > 1) {
-						p.setFirstName(names[0]);
-						p.setLastName(names[1]);
-					} else {
-						p.setFirstName(full_name);
-					}
-				}
-				String username = obj.optString("username", null);
-				p.setProfileUrl(VIEW_PROFILE_URL + username);
-				p.setProfileImageURL(obj.optString("profile_picture"));
-				if (config.isSaveRawResponse()) {
-					p.setRawResponse(obj.toString());
-				}
-				plist.add(p);
-			}
-		}
-		return plist;
-	}
+    @Override
+    public String getLoginRedirectURL(final String successUrl) throws Exception {
+        return authenticationStrategy.getLoginRedirectURL(successUrl);
+    }
 
-	@Override
-	public String getLoginRedirectURL(final String successUrl) throws Exception {
-		return authenticationStrategy.getLoginRedirectURL(successUrl);
-	}
-
-	@Override
-	public String getProviderId() {
+    @Override
+    public String getProviderId() {
 		/* ="instagram" */
-		return config.getId();
-	}
+        return config.getId();
+    }
 
-	@Override
-	public Profile getUserProfile() throws Exception {
-		if (userProfile == null && accessGrant != null) {
-			userProfile = getProfile();
-		}
-		// avoid returning null or throw exception
-		return userProfile;
-	}
+    @Override
+    public Profile getUserProfile() throws Exception {
+        if (userProfile == null && accessGrant != null) {
+            userProfile = getProfile();
+        }
+        // avoid returning null or throw exception
+        return userProfile;
+    }
 
-	private Profile getProfile() throws Exception {
-		LOG.debug("Obtaining user profile");
-		Response response;
-		try {
-			response = authenticationStrategy.executeFeed(PROFILE_URL);
-		} catch (Exception e) {
-			throw new SocialAuthException(
-					"Failed to retrieve the user profile from " + PROFILE_URL,
-					e);
-		}
+    private Profile getProfile() throws Exception {
+        LOG.debug("Obtaining user profile");
+        Response response;
+        try {
+            response = authenticationStrategy.executeFeed(PROFILE_URL);
+        } catch (Exception e) {
+            throw new SocialAuthException(
+                    "Failed to retrieve the user profile from " + PROFILE_URL,
+                    e);
+        }
 
-		if (response.getStatus() == 200) {
-			String respStr = response
-					.getResponseBodyAsString(Constants.ENCODING);
-			LOG.debug("Profile JSON string :: " + respStr);
-			JSONObject obj = new JSONObject(respStr);
-			JSONObject data = obj.getJSONObject("data");
-			Profile p = new Profile();
-			p.setValidatedId(data.optString("id", null));
-			String full_name = data.optString("full_name", null);
-			p.setDisplayName(full_name);
-			if (full_name != null) {
-				String[] names = full_name.split(" ");
-				if (names.length > 1) {
-					p.setFirstName(names[0]);
-					p.setLastName(names[1]);
-				} else {
-					p.setFirstName(full_name);
-				}
-			}
-			p.setProfileImageURL(data.optString("profile_picture", null));
-			p.setProviderId(getProviderId());
-			if (config.isSaveRawResponse()) {
-				p.setRawResponse(respStr);
-			}
-			return p;
-		} else {
-			throw new SocialAuthException(
-					"Failed to retrieve the user profile from " + PROFILE_URL
-							+ ". Server response " + response.getStatus());
-		}
-	}
+        if (response.getStatus() == 200) {
+            String respStr = response
+                    .getResponseBodyAsString(Constants.ENCODING);
+            LOG.debug("Profile JSON string :: " + respStr);
+            JSONObject obj = new JSONObject(respStr);
+            JSONObject data = obj.getJSONObject("data");
+            Profile p = new Profile();
+            p.setValidatedId(data.optString("id", null));
+            String full_name = data.optString("full_name", null);
+            p.setDisplayName(full_name);
+            if (full_name != null) {
+                String[] names = full_name.split(" ");
+                if (names.length > 1) {
+                    p.setFirstName(names[0]);
+                    p.setLastName(names[1]);
+                } else {
+                    p.setFirstName(full_name);
+                }
+            }
+            p.setProfileImageURL(data.optString("profile_picture", null));
+            p.setProviderId(getProviderId());
+            if (config.isSaveRawResponse()) {
+                p.setRawResponse(respStr);
+            }
+            return p;
+        } else {
+            throw new SocialAuthException(
+                    "Failed to retrieve the user profile from " + PROFILE_URL
+                            + ". Server response " + response.getStatus());
+        }
+    }
 
-	@Override
-	public void logout() {
-		accessGrant = null;
-		authenticationStrategy.logout();
-	}
+    @Override
+    public void logout() {
+        accessGrant = null;
+        authenticationStrategy.logout();
+    }
 
-	@Override
-	public void setAccessGrant(final AccessGrant accessGrant)
-			throws AccessTokenExpireException {
-		this.accessGrant = accessGrant;
-		authenticationStrategy.setAccessGrant(accessGrant);
-	}
+    @Override
+    public void setPermission(final Permission p) {
+        LOG.debug("Permission requested: " + p.toString());
+        // this.scope = p;
+        authenticationStrategy.setPermission(p);
+        authenticationStrategy.setScope(getScope(p));
+    }
 
-	@Override
-	public void setPermission(final Permission p) {
-		LOG.debug("Permission requested: " + p.toString());
-		// this.scope = p;
-		authenticationStrategy.setPermission(p);
-		authenticationStrategy.setScope(getScope(p));
-	}
+    @Override
+    public Response updateStatus(final String msg) throws Exception {
+        LOG.warn("WARNING: Not implemented for Instagram");
+        throw new SocialAuthException(
+                "Update Status is not implemented for Instagram");
+    }
 
-	@Override
-	public Response updateStatus(final String msg) throws Exception {
-		LOG.warn("WARNING: Not implemented for Instagram");
-		throw new SocialAuthException(
-				"Update Status is not implemented for Instagram");
-	}
+    @Override
+    public Response uploadImage(final String message, final String fileName,
+                                final InputStream inputStream) throws Exception {
+        LOG.warn("WARNING: Not implemented for Instagram");
+        throw new SocialAuthException(
+                "Upload Image is not implemented for Instagram");
+    }
 
-	@Override
-	public Response uploadImage(final String message, final String fileName,
-			final InputStream inputStream) throws Exception {
-		LOG.warn("WARNING: Not implemented for Instagram");
-		throw new SocialAuthException(
-				"Upload Image is not implemented for Instagram");
-	}
+    @Override
+    public Profile verifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        return doVerifyResponse(requestParams);
+    }
 
-	@Override
-	public Profile verifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		return doVerifyResponse(requestParams);
-	}
+    private Profile doVerifyResponse(final Map<String, String> requestParams)
+            throws Exception {
+        LOG.info("Verifying the authentication response from provider");
+        if (requestParams.get("error") != null
+                && "access_denied".equals(requestParams.get("error"))) {
+            throw new UserDeniedPermissionException();
+        }
 
-	private Profile doVerifyResponse(final Map<String, String> requestParams)
-			throws Exception {
-		LOG.info("Verifying the authentication response from provider");
-		if (requestParams.get("error") != null
-				&& "access_denied".equals(requestParams.get("error"))) {
-			throw new UserDeniedPermissionException();
-		}
+        accessGrant = authenticationStrategy.verifyResponse(requestParams,
+                MethodType.POST.toString());
+        if (accessGrant != null) {
+            LOG.debug("Obtaining user profile");
+            getProfile();
+            return this.userProfile;
+        } else {
+            throw new SocialAuthException("Access token not found");
+        }
+    }
 
-		accessGrant = authenticationStrategy.verifyResponse(requestParams,
-				MethodType.POST.toString());
-		if (accessGrant != null) {
-			LOG.debug("Obtaining user profile");
-			getProfile();
-			return this.userProfile;
-		} else {
-			throw new SocialAuthException("Access token not found");
-		}
-	}
+    @Override
+    protected OAuthStrategyBase getOauthStrategy() {
+        return authenticationStrategy;
+    }
 
-	@Override
-	protected OAuthStrategyBase getOauthStrategy() {
-		return authenticationStrategy;
-	}
-
-	@Override
-	protected List<String> getPluginsList() {
-		List<String> list = new ArrayList<String>();
-		list.add("org.brickred.socialauth.plugin.instagram.FeedPluginImpl");
-		if (config.getRegisteredPlugins() != null
-				&& config.getRegisteredPlugins().length > 0) {
-			list.addAll(Arrays.asList(config.getRegisteredPlugins()));
-		}
-		return list;
-	}
+    @Override
+    protected List<String> getPluginsList() {
+        List<String> list = new ArrayList<String>();
+        list.add("org.brickred.socialauth.plugin.instagram.FeedPluginImpl");
+        if (config.getRegisteredPlugins() != null
+                && config.getRegisteredPlugins().length > 0) {
+            list.addAll(Arrays.asList(config.getRegisteredPlugins()));
+        }
+        return list;
+    }
 
 }

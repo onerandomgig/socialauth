@@ -30,87 +30,83 @@ import java.util.Date;
 
 /**
  * Stores the BirthDate
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class DateComponents implements Serializable {
 
-	private static final long serialVersionUID = 219784612977177962L;
+    private static final long serialVersionUID = 219784612977177962L;
 
-	private int day;
-	private int month;
-	private int year;
+    private int day;
+    private int month;
+    private int year;
 
-	/**
-	 * Retrieves the birth day.
-	 * 
-	 * @return the birth day
-	 */
-	public int getDay() {
-		return day;
-	}
+    /**
+     * Retrieves the birth day.
+     *
+     * @return the birth day
+     */
+    public int getDay() {
+        return day;
+    }
 
-	/**
-	 * Updates the birth day
-	 * 
-	 * @param day
-	 *            the birth day
-	 */
-	public void setDay(final int day) {
-		this.day = day;
-	}
+    /**
+     * Updates the birth day
+     *
+     * @param day the birth day
+     */
+    public void setDay(final int day) {
+        this.day = day;
+    }
 
-	/**
-	 * Retrieves the birth month
-	 * 
-	 * @return the birth month
-	 */
-	public int getMonth() {
-		return month;
-	}
+    /**
+     * Retrieves the birth month
+     *
+     * @return the birth month
+     */
+    public int getMonth() {
+        return month;
+    }
 
-	/**
-	 * Updates the birth month
-	 * 
-	 * @param month
-	 *            the birth month
-	 */
-	public void setMonth(final int month) {
-		this.month = month;
-	}
+    /**
+     * Updates the birth month
+     *
+     * @param month the birth month
+     */
+    public void setMonth(final int month) {
+        this.month = month;
+    }
 
-	/**
-	 * Retrieves the birth year
-	 * 
-	 * @return the birth year
-	 */
-	public int getYear() {
-		return year;
-	}
+    /**
+     * Retrieves the birth year
+     *
+     * @return the birth year
+     */
+    public int getYear() {
+        return year;
+    }
 
-	/**
-	 * Updates the birth year
-	 * 
-	 * @param year
-	 *            the birth year
-	 */
-	public void setYear(final int year) {
-		this.year = year;
-	}
+    /**
+     * Updates the birth year
+     *
+     * @param year the birth year
+     */
+    public void setYear(final int year) {
+        this.year = year;
+    }
 
-	/**
-	 * Returns the date in mm/dd/yyyy format
-	 */
-	@Override
-	public String toString() {
-		try {
-			SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");
-			Date date = formatter.parse(month + "/" + day + "/" + year);
+    /**
+     * Returns the date in mm/dd/yyyy format
+     */
+    @Override
+    public String toString() {
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("MM/dd/yyyy");
+            Date date = formatter.parse(month + "/" + day + "/" + year);
 
-			return formatter.format(date);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+            return formatter.format(date);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

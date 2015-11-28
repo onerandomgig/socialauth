@@ -24,14 +24,6 @@
  */
 package org.brickred.socialauth.plugin.googleplus;
 
-import java.io.Serializable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.TimeZone;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.Feed;
@@ -43,70 +35,76 @@ import org.brickred.socialauth.util.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
+
 /**
  * Feed Plugin implementation for GooglePlus
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class FeedPluginImpl implements FeedPlugin, Serializable {
 
-	private static final long serialVersionUID = -65514329203379220L;
-	private static final String FEED_URL = "https://www.googleapis.com/plus/v1/people/me/activities/public?maxResults=100";
-	private ProviderSupport providerSupport;
-	private static final DateFormat dateFormat = new SimpleDateFormat(
-			"yyyy-MM-dd'T'hh:mm:ss.SSS'Z'");
+    private static final long serialVersionUID = -65514329203379220L;
+    private static final String FEED_URL = "https://www.googleapis.com/plus/v1/people/me/activities/public?maxResults=100";
+    private static final DateFormat dateFormat = new SimpleDateFormat(
+            "yyyy-MM-dd'T'hh:mm:ss.SSS'Z'");
+    private final Log LOG = LogFactory.getLog(this.getClass());
+    private ProviderSupport providerSupport;
 
-	private final Log LOG = LogFactory.getLog(this.getClass());
+    public FeedPluginImpl(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
-	public FeedPluginImpl(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-		dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-	}
+    @Override
+    public ProviderSupport getProviderSupport() {
+        return providerSupport;
+    }
 
-	@Override
-	public ProviderSupport getProviderSupport() {
-		return providerSupport;
-	}
+    @Override
+    public void setProviderSupport(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 
-	@Override
-	public void setProviderSupport(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    @Override
+    public List<Feed> getFeeds() throws Exception {
+        LOG.info("getting feeds for google plus");
+        List<Feed> list = new ArrayList<Feed>();
+        try {
+            Response response = providerSupport.api(FEED_URL);
+            String respStr = response
+                    .getResponseBodyAsString(Constants.ENCODING);
+            System.out.println(respStr);
+            JSONObject resp = new JSONObject(respStr);
+            JSONArray items = resp.getJSONArray("items");
+            LOG.debug("Feeds count : " + items.length());
+            for (int i = 0; i < items.length(); i++) {
+                Feed feed = new Feed();
+                JSONObject obj = items.getJSONObject(i);
+                feed.setMessage(obj.optString("title", null));
+                feed.setId(obj.optString("id", null));
+                if (obj.has("actor")) {
+                    JSONObject actor = obj.getJSONObject("actor");
+                    feed.setFrom(actor.optString("displayName", null));
+                }
+                String pubDate = obj.optString("published", null);
+                if (pubDate != null) {
+                    Date date = dateFormat.parse(pubDate);
+                    feed.setCreatedAt(date);
+                }
+                list.add(feed);
+            }
 
-	@Override
-	public List<Feed> getFeeds() throws Exception {
-		LOG.info("getting feeds for google plus");
-		List<Feed> list = new ArrayList<Feed>();
-		try {
-			Response response = providerSupport.api(FEED_URL);
-			String respStr = response
-					.getResponseBodyAsString(Constants.ENCODING);
-			System.out.println(respStr);
-			JSONObject resp = new JSONObject(respStr);
-			JSONArray items = resp.getJSONArray("items");
-			LOG.debug("Feeds count : " + items.length());
-			for (int i = 0; i < items.length(); i++) {
-				Feed feed = new Feed();
-				JSONObject obj = items.getJSONObject(i);
-				feed.setMessage(obj.optString("title", null));
-				feed.setId(obj.optString("id", null));
-				if (obj.has("actor")) {
-					JSONObject actor = obj.getJSONObject("actor");
-					feed.setFrom(actor.optString("displayName", null));
-				}
-				String pubDate = obj.optString("published", null);
-				if (pubDate != null) {
-					Date date = dateFormat.parse(pubDate);
-					feed.setCreatedAt(date);
-				}
-				list.add(feed);
-			}
-
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting Feeds from "
-					+ FEED_URL, e);
-		}
-		return list;
-	}
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting Feeds from "
+                    + FEED_URL, e);
+        }
+        return list;
+    }
 }

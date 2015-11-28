@@ -29,41 +29,41 @@ import java.io.Serializable;
 
 public class Permission implements Serializable {
 
-	private static final long serialVersionUID = 3439812589513804823L;
-	public static final Permission AUTHENTICATE_ONLY = new Permission(
-			"authenticate_only");
-	public static final Permission ALL = new Permission("all");
-	public static final Permission DEFAULT = new Permission("default");
-	public static final Permission CUSTOM = new Permission("custom");
-	private String scope;
+    public static final Permission AUTHENTICATE_ONLY = new Permission(
+            "authenticate_only");
+    public static final Permission ALL = new Permission("all");
+    public static final Permission DEFAULT = new Permission("default");
+    public static final Permission CUSTOM = new Permission("custom");
+    private static final long serialVersionUID = 3439812589513804823L;
+    private String scope;
 
-	public Permission(final String scope) {
-		this.scope = scope;
-	}
+    public Permission(final String scope) {
+        this.scope = scope;
+    }
 
-	public Permission() {
+    public Permission() {
 
-	}
+    }
 
-	@Override
-	public boolean equals(final Object obj) {
-		if (obj == null || !(obj instanceof Permission)) {
-			return false;
-		}
-		Permission p = (Permission) obj;
-		return p.scope.equals(this.scope);
-	}
+    @Override
+    public boolean equals(final Object obj) {
+        if (obj == null || !(obj instanceof Permission)) {
+            return false;
+        }
+        Permission p = (Permission) obj;
+        return p.scope.equals(this.scope);
+    }
 
-	@Override
-	public String toString() {
-		return scope;
-	}
+    @Override
+    public String toString() {
+        return scope;
+    }
 
-	public String getScope() {
-		return scope;
-	}
+    public String getScope() {
+        return scope;
+    }
 
-	public void setScope(final String scope) {
-		this.scope = scope;
-	}
+    public void setScope(final String scope) {
+        this.scope = scope;
+    }
 }

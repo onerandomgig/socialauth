@@ -28,28 +28,27 @@ package org.brickred.socialauth.oauthstrategy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.Permission;
-import org.brickred.socialauth.exception.ProviderStateException;
 import org.brickred.socialauth.exception.SocialAuthException;
 import org.brickred.socialauth.util.*;
 
 import java.io.InputStream;
 import java.util.Map;
 
-public class OAuth1 implements OAuthStrategyBase {
+public class StatelessOAuth1 implements OAuthStrategyBase {
 
     private static final long serialVersionUID = -447820298609650347L;
-    private final Log LOG = LogFactory.getLog(OAuth1.class);
+    private final Log LOG = LogFactory.getLog(StatelessOAuth1.class);
 
     private AccessGrant accessToken;
     private AccessGrant requestToken;
     private OAuthConsumer oauth;
-    private boolean providerState;
     private Map<String, String> endpoints;
     private String scope;
     private Permission permission;
     private String providerId;
 
-    public OAuth1(final OAuthConfig config, final Map<String, String> endpoints) {
+    public StatelessOAuth1(final OAuthConfig config, final Map<String, String> endpoints) {
+
         oauth = new OAuthConsumer(config);
         this.endpoints = endpoints;
         permission = Permission.ALL;
@@ -65,7 +64,6 @@ public class OAuth1 implements OAuthStrategyBase {
     public String getLoginRedirectURL(final String successUrl,
                                       Map<String, String> requestParams) throws Exception {
         LOG.info("Determining URL for redirection");
-        providerState = true;
         LOG.debug("Call to fetch Request Token");
         requestToken = oauth.getRequestToken(
                 endpoints.get(Constants.OAUTH_REQUEST_TOKEN_URL), successUrl);
@@ -95,11 +93,9 @@ public class OAuth1 implements OAuthStrategyBase {
     public AccessGrant verifyResponse(final Map<String, String> requestParams,
                                       final String methodType) throws Exception {
         LOG.info("Verifying the authentication response from provider");
-        if (!providerState) {
-            throw new ProviderStateException();
-        }
         if (requestToken == null) {
-            throw new SocialAuthException("Request token is null");
+            requestToken = new AccessGrant();
+            requestToken.setKey(requestParams.get(Constants.OAUTH_TOKEN));
         }
         String verifier = requestParams.get(Constants.OAUTH_VERIFIER);
         if (verifier != null) {
@@ -181,7 +177,7 @@ public class OAuth1 implements OAuthStrategyBase {
     @Override
     public void logout() {
         accessToken = null;
-        providerState = false;
+        requestToken = null;
     }
 
     @Override
@@ -203,5 +199,4 @@ public class OAuth1 implements OAuthStrategyBase {
     public void setAccessGrant(final AccessGrant accessGrant) {
         this.accessToken = accessGrant;
     }
-
 }

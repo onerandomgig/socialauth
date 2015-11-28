@@ -26,10 +26,9 @@ package org.brickred.socialauth.util;
 
 /**
  * It defines the HTTP Method Types
- * 
+ *
  * @author tarunn@brickred.com
- * 
  */
 public enum MethodType {
-	GET, POST, PUT, DELETE
+    GET, POST, PUT, DELETE
 }

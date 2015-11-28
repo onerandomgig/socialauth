@@ -24,12 +24,6 @@
  */
 package org.brickred.socialauth.plugin.facebook;
 
-import java.io.Serializable;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.brickred.socialauth.Feed;
@@ -41,78 +35,83 @@ import org.brickred.socialauth.util.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Feed Plugin implementation for Facebook
- * 
+ *
  * @author tarun.nagpal
- * 
  */
 public class FeedPluginImpl implements FeedPlugin, Serializable {
 
-	private static final long serialVersionUID = 2108503235436046045L;
-	private static final String FEED_URL = "https://graph.facebook.com/v2.2/me/feed";
-	private static final DateFormat dateFormat = new SimpleDateFormat(
-			"yyyy-MM-dd'T'hh:mm:ssz");
-	private final Log LOG = LogFactory.getLog(FeedPluginImpl.class);
+    private static final long serialVersionUID = 2108503235436046045L;
+    private static final String FEED_URL = "https://graph.facebook.com/v2.2/me/feed";
+    private static final DateFormat dateFormat = new SimpleDateFormat(
+            "yyyy-MM-dd'T'hh:mm:ssz");
+    private final Log LOG = LogFactory.getLog(FeedPluginImpl.class);
 
-	private ProviderSupport providerSupport;
+    private ProviderSupport providerSupport;
 
-	public FeedPluginImpl(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    public FeedPluginImpl(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 
-	@Override
-	public List<Feed> getFeeds() throws Exception {
-		List<Feed> list = new ArrayList<Feed>();
-		try {
-			Response response = providerSupport.api(FEED_URL);
-			String respStr = response
-					.getResponseBodyAsString(Constants.ENCODING);
-			JSONObject resp = new JSONObject(respStr);
-			JSONArray data = resp.getJSONArray("data");
-			LOG.debug("Feeds count : " + data.length());
-			for (int i = 0; i < data.length(); i++) {
-				Feed feed = new Feed();
-				JSONObject obj = data.getJSONObject(i);
-				if (obj.has("from")) {
-					JSONObject fobj = obj.getJSONObject("from");
-					feed.setFrom(fobj.optString("name", null));
-					feed.setId(fobj.optString("id", null));
-				}
-				if (obj.has("message")) {
-					feed.setMessage(obj.optString("message", null));
-				} else if (obj.has("story")) {
-					feed.setMessage(obj.optString("story", null));
-				} else if (obj.has("name")) {
-					feed.setMessage(obj.optString("name", null));
-				} else if (obj.has("caption")) {
-					feed.setMessage(obj.optString("caption", null));
-				} else if (obj.has("description")) {
-					feed.setMessage(obj.getString("description"));
-				} else if (obj.has("picture")) {
-					feed.setMessage(obj.optString("picture", null));
-				}
+    @Override
+    public List<Feed> getFeeds() throws Exception {
+        List<Feed> list = new ArrayList<Feed>();
+        try {
+            Response response = providerSupport.api(FEED_URL);
+            String respStr = response
+                    .getResponseBodyAsString(Constants.ENCODING);
+            JSONObject resp = new JSONObject(respStr);
+            JSONArray data = resp.getJSONArray("data");
+            LOG.debug("Feeds count : " + data.length());
+            for (int i = 0; i < data.length(); i++) {
+                Feed feed = new Feed();
+                JSONObject obj = data.getJSONObject(i);
+                if (obj.has("from")) {
+                    JSONObject fobj = obj.getJSONObject("from");
+                    feed.setFrom(fobj.optString("name", null));
+                    feed.setId(fobj.optString("id", null));
+                }
+                if (obj.has("message")) {
+                    feed.setMessage(obj.optString("message", null));
+                } else if (obj.has("story")) {
+                    feed.setMessage(obj.optString("story", null));
+                } else if (obj.has("name")) {
+                    feed.setMessage(obj.optString("name", null));
+                } else if (obj.has("caption")) {
+                    feed.setMessage(obj.optString("caption", null));
+                } else if (obj.has("description")) {
+                    feed.setMessage(obj.getString("description"));
+                } else if (obj.has("picture")) {
+                    feed.setMessage(obj.optString("picture", null));
+                }
 
-				String createdTime = obj.optString("created_time", null);
-				if (createdTime != null) {
-					feed.setCreatedAt(dateFormat.parse(createdTime));
-				}
-				list.add(feed);
-			}
-		} catch (Exception e) {
-			throw new SocialAuthException("Error while getting Feeds from "
-					+ FEED_URL, e);
-		}
-		return list;
-	}
+                String createdTime = obj.optString("created_time", null);
+                if (createdTime != null) {
+                    feed.setCreatedAt(dateFormat.parse(createdTime));
+                }
+                list.add(feed);
+            }
+        } catch (Exception e) {
+            throw new SocialAuthException("Error while getting Feeds from "
+                    + FEED_URL, e);
+        }
+        return list;
+    }
 
-	@Override
-	public ProviderSupport getProviderSupport() {
-		return providerSupport;
-	}
+    @Override
+    public ProviderSupport getProviderSupport() {
+        return providerSupport;
+    }
 
-	@Override
-	public void setProviderSupport(final ProviderSupport providerSupport) {
-		this.providerSupport = providerSupport;
-	}
+    @Override
+    public void setProviderSupport(final ProviderSupport providerSupport) {
+        this.providerSupport = providerSupport;
+    }
 }
