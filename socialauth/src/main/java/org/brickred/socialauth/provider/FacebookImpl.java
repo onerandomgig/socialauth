@@ -54,7 +54,7 @@ import java.util.*;
 public class FacebookImpl extends AbstractProvider {
 
     private static final long serialVersionUID = 8644510564735754296L;
-    private static final String PROFILE_URL = "https://graph.facebook.com/v2.5/me";
+    private static final String PROFILE_URL = "https://graph.facebook.com/v2.5/me?fields=id,name,email";
     private static final String CONTACTS_URL = "https://graph.facebook.com/v2.5/me/friends";
     private static final String UPDATE_STATUS_URL = "https://graph.facebook.com/v2.5/me/feed";
     private static final String PROFILE_IMAGE_URL = "http://graph.facebook.com/%1$s/picture";
